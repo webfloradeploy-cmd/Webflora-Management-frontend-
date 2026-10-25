@@ -1,22 +1,22 @@
 // API Configuration
 console.log("VITE_API_BASE_URL resolved from environment:", import.meta.env.VITE_API_BASE_URL);
 
-let baseUrl = import.meta.env.VITE_API_BASE_URL !== undefined ? import.meta.env.VITE_API_BASE_URL : '';
+let baseUrl = import.meta.env.VITE_API_BASE_URL !== undefined && import.meta.env.VITE_API_BASE_URL !== '' 
+    ? import.meta.env.VITE_API_BASE_URL 
+    : 'https://webflora-management-backend-seven.vercel.app';
 
-// Self-healing: if running on localhost but the resolved base URL points to the production site or is empty,
-// force it to point to the local backend port (4002).
+// Localhost override
 if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname === '::1')) {
-    if (baseUrl.includes('crm.webfloratechnologies.com') || !baseUrl) {
-        baseUrl = 'http://localhost:4002';
-        console.log("Self-healing: Overrode API_BASE_URL to localhost backend:", baseUrl);
-    }
+    baseUrl = 'http://localhost:4002';
+    console.log("Self-healing: Overrode API_BASE_URL to localhost backend:", baseUrl);
 }
 
-// Production fallback: if running on the production frontend domain and baseUrl is still empty,
-// point to the Vercel-deployed backend.
-if (typeof window !== 'undefined' && window.location.hostname === 'crm.webfloratechnologies.com' && !baseUrl) {
-    baseUrl = 'https://webflora-management-backend.vercel.app';
-    console.log("Production fallback: API_BASE_URL set to:", baseUrl);
+// Production fallback for Vercel deployment or custom domain
+if (typeof window !== 'undefined' && (window.location.hostname.includes('vercel.app') || window.location.hostname.includes('webfloratechnologies.com'))) {
+    if (!baseUrl || baseUrl.includes('localhost') || baseUrl.includes('webflora-management-backend.vercel.app')) {
+        baseUrl = 'https://webflora-management-backend-seven.vercel.app';
+        console.log("Production fallback: API_BASE_URL set to:", baseUrl);
+    }
 }
 
 export const API_BASE_URL = baseUrl;
