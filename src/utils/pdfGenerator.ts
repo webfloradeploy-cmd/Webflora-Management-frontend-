@@ -185,7 +185,7 @@ export const generateInvoicePDF = (invoice: any) => {
     doc.setTextColor(SLATE_600_RGB[0], SLATE_600_RGB[1], SLATE_600_RGB[2]);
     doc.text([
         "IOC Colony, Kumhrar, Patna, Bihar, 800026",
-        "Email: hello.webflora@gmail.com",
+        "Email: info@webfloratechnologies.com",
         "Website: www.webfloratechnologies.com"
     ], pageWidth - 20, 24, { align: "right", lineHeightFactor: 1.3 });
 
@@ -493,7 +493,7 @@ export const generateInvoicePDF = (invoice: any) => {
 // =========================================================================
 // 2. GENERATE QUOTATION PDF
 // =========================================================================
-export const generateQuotationPDF = (quotation: any) => {
+export const generateQuotationPDF = (quotation: any, shouldDownload: boolean = true): jsPDF | void => {
     if (!quotation) return;
 
     const doc = new jsPDF({
@@ -537,7 +537,7 @@ export const generateQuotationPDF = (quotation: any) => {
     doc.setTextColor(SLATE_600_RGB[0], SLATE_600_RGB[1], SLATE_600_RGB[2]);
     doc.text([
         "IOC Colony, Kumhrar, Patna, Bihar, 800026",
-        "Email: hello.webflora@gmail.com",
+        "Email: info@webfloratechnologies.com",
         "Website: www.webfloratechnologies.com"
     ], pageWidth - margin, y + 6, { align: "right", lineHeightFactor: 1.3 });
 
@@ -554,7 +554,7 @@ export const generateQuotationPDF = (quotation: any) => {
     doc.setFontSize(15);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(SLATE_900_RGB[0], SLATE_900_RGB[1], SLATE_900_RGB[2]);
-    doc.text("DEVELOPMENT ESTIMATION & QUOTATION", margin, y);
+    doc.text("PROJECT ESTIMATION & QUOTATION", margin, y);
 
     y += 7;
 
@@ -612,9 +612,16 @@ export const generateQuotationPDF = (quotation: any) => {
 
     y += 35;
 
+    // Dynamic section counter
+    let sectionCount = 1;
+    const getNextSectionTitle = (title: string) => {
+        const num = String(sectionCount++).padStart(2, '0');
+        return `${num}. ${title}`;
+    };
+
     // 3. Project Details
     checkPageBreak(30);
-    drawSectionHeader(doc, "01. PROJECT OVERVIEW & PROJECT DETAILS", margin, y, 9.5);
+    drawSectionHeader(doc, getNextSectionTitle("PROJECT OVERVIEW & SPECIFICATIONS"), margin, y, 9.5);
     y += 7;
 
     doc.setFont("helvetica", "bold");
@@ -623,15 +630,15 @@ export const generateQuotationPDF = (quotation: any) => {
     doc.text("Project Title : ", margin, y);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(SLATE_600_RGB[0], SLATE_600_RGB[1], SLATE_600_RGB[2]);
-    doc.text(quotation.projectName || "Custom Digital Application Development", margin + 22, y);
+    doc.text(quotation.projectName || "Custom Project Scope", margin + 22, y);
 
     y += 5.5;
     doc.setFont("helvetica", "bold");
     doc.text("Project Type  : ", margin, y);
     doc.setFont("helvetica", "normal");
-    doc.text(quotation.projectType || "Website Development", margin + 22, y);
+    doc.text(quotation.projectType || "General Services", margin + 22, y);
 
-    if (quotation.projectOverview) {
+    if (quotation.projectOverview && quotation.projectOverview.trim().length > 0) {
         y += 7;
         doc.setFont("helvetica", "bold");
         doc.text("Project Description & Objectives:", margin, y);
@@ -649,44 +656,34 @@ export const generateQuotationPDF = (quotation: any) => {
         y += 5;
     }
 
-    // 4. Scope of Work
-    y += 4;
-    checkPageBreak(30);
-    drawSectionHeader(doc, "02. DETAILED SCOPE OF WORK", margin, y, 9.5);
-    y += 7;
-
-    const scopeVal = quotation.scopeOfWork || "• Standard visual engineering sprints.\n• Modular features assembly.\n• Responsive layout execution.";
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(8);
-    doc.setTextColor(SLATE_600_RGB[0], SLATE_600_RGB[1], SLATE_600_RGB[2]);
-    const splitScope = doc.splitTextToSize(scopeVal, cardWidth);
-    for (let line of splitScope) {
-        checkPageBreak(5);
-        doc.text(line, margin, y);
+    // 4. Scope of Work (Only if provided)
+    if (quotation.scopeOfWork && quotation.scopeOfWork.trim().length > 0) {
         y += 4;
+        checkPageBreak(30);
+        drawSectionHeader(doc, getNextSectionTitle("DETAILED SCOPE OF WORK"), margin, y, 9.5);
+        y += 7;
+
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8);
+        doc.setTextColor(SLATE_600_RGB[0], SLATE_600_RGB[1], SLATE_600_RGB[2]);
+        const splitScope = doc.splitTextToSize(quotation.scopeOfWork, cardWidth);
+        for (let line of splitScope) {
+            checkPageBreak(5);
+            doc.text(line, margin, y);
+            y += 4;
+        }
+        y += 6;
     }
-    y += 6;
 
-    // 5. Checklists (Website Pages & Admin features Checklist)
-    const isPureSeo = (type: string) => {
-        if (!type) return false;
-        const normalized = type.toLowerCase();
-        return normalized.includes("seo") &&
-            !normalized.includes("website") &&
-            !normalized.includes("app") &&
-            !normalized.includes("erp") &&
-            !normalized.includes("software");
-    };
-
-    const skipChecklists = isPureSeo(quotation.projectType);
+    // 5. Checklists (Website Pages & Admin features Checklist - only if present)
+    const hasPages = Array.isArray(quotation.websitePages) && quotation.websitePages.some((p: any) => p && (p.page || typeof p === 'string'));
+    const hasFeats = Array.isArray(quotation.adminPanelFeatures) && quotation.adminPanelFeatures.some((f: any) => f && (f.feature || typeof f === 'string'));
+    const skipChecklists = !hasPages && !hasFeats;
 
     if (!skipChecklists) {
         checkPageBreak(40);
-        drawSectionHeader(doc, "03. WEBPAGE MODULES & ADMINISTRATIVE FUNCTIONS", margin, y, 9.5);
+        drawSectionHeader(doc, getNextSectionTitle("MODULES & FEATURE SPECIFICATIONS"), margin, y, 9.5);
         y += 7;
-
-        const hasPages = quotation.websitePages && quotation.websitePages.length > 0;
-        const hasFeats = quotation.adminPanelFeatures && quotation.adminPanelFeatures.length > 0;
 
         let checklistRows: any[] = [];
         const maxLen = Math.max(
@@ -695,29 +692,40 @@ export const generateQuotationPDF = (quotation: any) => {
         );
 
         for (let i = 0; i < maxLen; i++) {
-            const pageItem = hasPages && quotation.websitePages[i]
+            const pObj = hasPages ? quotation.websitePages[i] : null;
+            const fObj = hasFeats ? quotation.adminPanelFeatures[i] : null;
+
+            const pageName = typeof pObj === 'string' ? pObj : (pObj?.page || '');
+            const isPageInc = typeof pObj === 'string' ? true : (pObj?.included !== false);
+            const pageItem = pageName
                 ? {
-                    content: `${quotation.websitePages[i].page}  ${quotation.websitePages[i].included ? "[Included]" : "[Excluded]"}`,
+                    content: `${pageName}  ${isPageInc ? "[Included]" : "[Excluded]"}`,
                     styles: {
-                        textColor: quotation.websitePages[i].included ? [22, 163, 74] : [148, 163, 184],
-                        fontStyle: quotation.websitePages[i].included ? 'bold' : 'normal'
+                        textColor: isPageInc ? [22, 163, 74] : [148, 163, 184],
+                        fontStyle: isPageInc ? 'bold' : 'normal'
                     }
                 }
                 : "";
-            const featItem = hasFeats && quotation.adminPanelFeatures[i]
+
+            const featName = typeof fObj === 'string' ? fObj : (fObj?.feature || '');
+            const isFeatInc = typeof fObj === 'string' ? true : (fObj?.included !== false);
+            const featItem = featName
                 ? {
-                    content: `${quotation.adminPanelFeatures[i].feature}  ${quotation.adminPanelFeatures[i].included ? "[Included]" : "[Excluded]"}`,
+                    content: `${featName}  ${isFeatInc ? "[Included]" : "[Excluded]"}`,
                     styles: {
-                        textColor: quotation.adminPanelFeatures[i].included ? [22, 163, 74] : [148, 163, 184],
-                        fontStyle: quotation.adminPanelFeatures[i].included ? 'bold' : 'normal'
+                        textColor: isFeatInc ? [22, 163, 74] : [148, 163, 184],
+                        fontStyle: isFeatInc ? 'bold' : 'normal'
                     }
                 }
                 : "";
-            checklistRows.push([pageItem, featItem]);
+
+            if (pageItem || featItem) {
+                checklistRows.push([pageItem, featItem]);
+            }
         }
 
         const getChecklistHeaders = (type: string) => {
-            if (!type) return ["Website / Inner Pages Checklist", "Admin Dashboard Features Checklist"];
+            if (!type) return ["Module / Pages Checklist", "Functional Specifications"];
             const normalized = type.toLowerCase();
             if (normalized.includes("app")) {
                 return ["Mobile App Screens Checklist", "Admin / API Features Checklist"];
@@ -764,57 +772,21 @@ export const generateQuotationPDF = (quotation: any) => {
         y += 10;
     }
 
-    // 6. Timeline section
-    checkPageBreak(30);
-    drawSectionHeader(doc, "04. DEVELOPMENT SPRINT TIMELINE Stages", margin, y, 9.5);
-    y += 7;
+    // 6. Timeline section (ONLY rendered if user actually configured timeline stages)
+    const validTimeline = (quotation.timeline || []).filter((t: any) => t && typeof t.stage === 'string' && t.stage.trim().length > 0);
+    if (validTimeline.length > 0) {
+        checkPageBreak(30);
+        drawSectionHeader(doc, getNextSectionTitle("PROJECT TIMELINE & DELIVERY PHASES"), margin, y, 9.5);
+        y += 7;
 
-    let timelineRows = (quotation.timeline || []).map((t: any) => [
-        t.stage,
-        `${t.days} Days`
-    ]);
+        const timelineRows = validTimeline.map((t: any) => [
+            t.stage,
+            `${t.days || 0} Days`
+        ]);
 
-    if (timelineRows.length === 0) {
-        const normalized = (quotation.projectType || "").toLowerCase();
-        let defaultTimeline: any[] = [];
-        if (normalized.includes("seo")) {
-            defaultTimeline = [
-                { stage: "Audit & Keyword Research", days: 7 },
-                { stage: "On-Page Optimization", days: 15 },
-                { stage: "Technical & Core Web Vitals Fixes", days: 10 }
-            ];
-        } else if (normalized.includes("app")) {
-            defaultTimeline = [
-                { stage: "UI/UX App Wireframing", days: 7 },
-                { stage: "API & Backend Construction", days: 10 },
-                { stage: "Cross-Platform Mobile Coding", days: 15 }
-            ];
-        } else if (normalized.includes("erp")) {
-            defaultTimeline = [
-                { stage: "Requirement Mapping & Architecture Design", days: 10 },
-                { stage: "Database Model & Core System Coding", days: 15 },
-                { stage: "Custom Modules Implementation", days: 20 }
-            ];
-        } else if (normalized.includes("design")) {
-            defaultTimeline = [
-                { stage: "Research & Brand Discovery", days: 4 },
-                { stage: "Low-Fidelity Wireframes", days: 6 },
-                { stage: "High-Fidelity Mockups Development", days: 8 }
-            ];
-        } else {
-            defaultTimeline = [
-                { stage: "UI/UX Design", days: 5 },
-                { stage: "Development", days: 10 },
-                { stage: "Testing & Deployment", days: 3 }
-            ];
-        }
-        timelineRows = defaultTimeline.map((t: any) => [t.stage, `${t.days} Days`]);
-    }
-
-    if (timelineRows.length > 0) {
         autoTable(doc, {
             startY: y,
-            head: [["Timeline Development Phase", "Duration (Days)"]],
+            head: [["Project Milestone / Phase", "Duration (Days)"]],
             body: timelineRows,
             theme: "plain",
             styles: {
@@ -834,73 +806,30 @@ export const generateQuotationPDF = (quotation: any) => {
         });
         y = (doc as any).lastAutoTable?.finalY || (y + 20);
         y += 10;
-    } else {
+    }
+
+    // 7. Deliverables (ONLY rendered if user actually added deliverables)
+    const validDeliverables = (quotation.deliverables || []).filter((d: any) => typeof d === 'string' && d.trim().length > 0);
+    if (validDeliverables.length > 0) {
+        checkPageBreak(35);
+        drawSectionHeader(doc, getNextSectionTitle("PROJECT DELIVERABLES"), margin, y, 9.5);
+        y += 7;
+
         doc.setFont("helvetica", "normal");
         doc.setFontSize(8);
-        doc.text("• Development timeline: Approximately 15-20 business days from advance mobilization payment.", margin, y);
-        y += 8;
-    }
+        doc.setTextColor(SLATE_600_RGB[0], SLATE_600_RGB[1], SLATE_600_RGB[2]);
 
-    // 7. Deliverables
-    checkPageBreak(35);
-    drawSectionHeader(doc, "05. SYSTEM DELIVERABLES LIST", margin, y, 9.5);
-    y += 7;
-
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(8);
-    doc.setTextColor(SLATE_600_RGB[0], SLATE_600_RGB[1], SLATE_600_RGB[2]);
-
-    let deliverablesVal = quotation.deliverables || [];
-    if (deliverablesVal.length === 0 || deliverablesVal.every((d: string) => !d.trim())) {
-        const normalized = (quotation.projectType || "").toLowerCase();
-        if (normalized.includes("seo")) {
-            deliverablesVal = [
-                "SEO Technical Audit Document",
-                "Keyword Research & Target Strategy Map",
-                "GA4 & Search Console Account Integration",
-                "On-page Schema Markup Implementation",
-                "First Month Optimization & Rank Report"
-            ];
-        } else if (normalized.includes("app")) {
-            deliverablesVal = [
-                "iOS App Bundle (IPA File/TestFlight Release)",
-                "Android App Package (APK/AAB Store Bundle)",
-                "Server API Source Code Setup",
-                "Admin Dashboard Panel Access"
-            ];
-        } else if (normalized.includes("erp")) {
-            deliverablesVal = [
-                "Secure Private Cloud ERP Deployment",
-                "Modular ERP Source Code Transfer",
-                "Custom Database Structure Schemas"
-            ];
-        } else if (normalized.includes("design")) {
-            deliverablesVal = [
-                "Figma Source File (Link & Access)",
-                "High-Resolution Visual Page Exports",
-                "Developer Specifications Hand-Off Document"
-            ];
-        } else {
-            deliverablesVal = [
-                "Responsive web architecture",
-                "Admin control system",
-                "100% source code repository transfer",
-                "SEO architecture",
-                "SSL integration"
-            ];
+        for (let d of validDeliverables) {
+            checkPageBreak(5);
+            doc.text(`•  ${d}`, margin + 2, y);
+            y += 4.5;
         }
+        y += 6;
     }
-
-    for (let d of deliverablesVal) {
-        checkPageBreak(5);
-        doc.text(`•  ${d}`, margin + 2, y);
-        y += 4.5;
-    }
-    y += 6;
 
     // 8. Cost breakdown / Financial Investment
     checkPageBreak(40);
-    drawSectionHeader(doc, "06. FINANCIAL INVESTMENT BREAKDOWN", margin, y, 9.5);
+    drawSectionHeader(doc, getNextSectionTitle("FINANCIAL INVESTMENT BREAKDOWN"), margin, y, 9.5);
     y += 7;
 
     const isMonthlyItem = (item: any) => {
@@ -908,15 +837,15 @@ export const generateQuotationPDF = (quotation: any) => {
         return /monthly|\/mo|\/month/i.test(item?.service || "");
     };
 
-    const pricingRows = quotation.items.map((item: any, index: number) => {
+    const pricingRows = (quotation.items || []).map((item: any, index: number) => {
         const isMonthly = isMonthlyItem(item);
-        const hasMonthlySuffix = /\/mo|\/month/i.test(item.service || "");
+        const hasMonthlySuffix = /\/mo|\/month/i.test(item?.service || "");
         return [
             String(index + 1),
-            item.service || "Technical Development",
-            item.quantity || 1,
-            formatCurrency(item.price || 0) + (isMonthly && !hasMonthlySuffix ? " / mo" : ""),
-            formatCurrency(item.amount || 0) + (isMonthly && !hasMonthlySuffix ? " / mo" : "")
+            item?.service || "Service Item",
+            item?.quantity || 1,
+            formatCurrency(item?.price || 0) + (isMonthly && !hasMonthlySuffix ? " / mo" : ""),
+            formatCurrency(item?.amount || 0) + (isMonthly && !hasMonthlySuffix ? " / mo" : "")
         ];
     });
 
@@ -954,7 +883,7 @@ export const generateQuotationPDF = (quotation: any) => {
     y += 6;
 
     // 9. Additional AMC services (Optional)
-    const addServices = quotation.additionalServices || [];
+    const addServices = (quotation.additionalServices || []).filter((as: any) => as && typeof as.service === 'string' && as.service.trim().length > 0);
     if (addServices.length > 0) {
         checkPageBreak(30);
         doc.setFont("helvetica", "bold");
@@ -1009,93 +938,47 @@ export const generateQuotationPDF = (quotation: any) => {
 
     y += 20;
 
-    // 11. Payment terms & T&C
-    checkPageBreak(35);
-    doc.setFontSize(8.5);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(SLATE_900_RGB[0], SLATE_900_RGB[1], SLATE_900_RGB[2]);
-    doc.text("PAYMENT METHOD & OFFER PROTOCOLS", margin, y);
-    y += 5.5;
+    // 11. Payment terms & T&C (ONLY rendered if user actually added payment terms or T&Cs)
+    const validPayTerms = (quotation.paymentTerms || []).filter((pt: string) => typeof pt === 'string' && pt.trim().length > 0);
+    const validTcs = (quotation.termsAndConditions || []).filter((tc: string) => typeof tc === 'string' && tc.trim().length > 0);
 
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(7.5);
-    doc.setTextColor(SLATE_600_RGB[0], SLATE_600_RGB[1], SLATE_600_RGB[2]);
+    if (validPayTerms.length > 0 || validTcs.length > 0) {
+        checkPageBreak(35);
+        drawSectionHeader(doc, getNextSectionTitle("PAYMENT TERMS & PROJECT PROTOCOLS"), margin, y, 9.5);
+        y += 7;
 
-    let payTerms = quotation.paymentTerms || [];
-    const isDefaultPayTerms = payTerms.length === 0 || payTerms.every((pt: string) => !pt.trim() || pt.includes("sprints") || pt.includes("frontend presentation"));
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(7.5);
+        doc.setTextColor(SLATE_600_RGB[0], SLATE_600_RGB[1], SLATE_600_RGB[2]);
 
-    if (isDefaultPayTerms) {
-        const normalized = (quotation.projectType || "").toLowerCase();
-        if (normalized.includes("seo")) {
-            payTerms = [
-                "100% advance monthly retainer payment to initiate optimization cycles.",
-                "Monthly invoices are due within the first 5 business days of each service cycle.",
-                "A minimum contract term of 3 months is recommended for ranking index build-up."
-            ];
-        } else if (normalized.includes("design")) {
-            payTerms = [
-                "50% advance mobilization deposit to initiate visual design discovery and wireframes.",
-                "50% upon final presentation and design mockups hand-off."
-            ];
-        } else {
-            payTerms = [
-                "50% advance mobilization deposit to initiate project design sprints.",
-                "30% upon visual frontend presentation and design confirmation.",
-                "20% before server deployment and source code transfer."
-            ];
+        if (validPayTerms.length > 0) {
+            doc.setFont("helvetica", "bold");
+            doc.text("Payment Schedule:", margin, y);
+            doc.setFont("helvetica", "normal");
+            y += 4.5;
+            for (let pt of validPayTerms) {
+                checkPageBreak(5);
+                doc.text(`•  ${pt}`, margin + 4, y);
+                y += 4;
+            }
+            y += 2;
         }
-    }
 
-    let tcs = quotation.termsAndConditions || [];
-    const isDefaultTcs = tcs.length === 0 || tcs.every((tc: string) => !tc.trim() || tc.includes("Source code") || tc.includes("visual layout reviews"));
-
-    if (isDefaultTcs) {
-        const normalized = (quotation.projectType || "").toLowerCase();
-        if (normalized.includes("seo")) {
-            tcs = [
-                "Search engine rankings are subject to Google algorithm updates and competitive index changes.",
-                "Monthly optimization actions commence immediately after receipt of advance retainer payment.",
-                "Analytics accounts, GSC logs, and CMS website admin access must be provided by the client.",
-                "Any modifications to page URLs or canonical configurations by the client's team must be pre-approved."
-            ];
-        } else if (normalized.includes("design")) {
-            tcs = [
-                "Visual interface design mockups source files will be delivered upon final milestone clearance.",
-                "Up to three rounds of wireframe layout revisions are included in this design phase.",
-                "Specialized stock media, typography licenses, or vector icon packs are billed at cost."
-            ];
-        } else {
-            tcs = [
-                "Source code and administrative passwords will be handed over only after full settlement of payment.",
-                "Development timeline will commence immediately after receipt of the advance mobilization payment.",
-                "Up to three rounds of visual layout reviews are included. Additional updates are billable."
-            ];
+        if (validTcs.length > 0) {
+            checkPageBreak(15);
+            doc.setFont("helvetica", "bold");
+            doc.text("Terms & Conditions:", margin, y);
+            doc.setFont("helvetica", "normal");
+            y += 4.5;
+            for (let tc of validTcs) {
+                checkPageBreak(5);
+                doc.text(`•  ${tc}`, margin + 4, y);
+                y += 4;
+            }
+            y += 4;
         }
+        y += 6;
     }
-
-    doc.setFont("helvetica", "bold");
-    doc.text("Payment Schedule:", margin, y);
-    doc.setFont("helvetica", "normal");
-    y += 4.5;
-    for (let pt of payTerms) {
-        checkPageBreak(5);
-        doc.text(`•  ${pt}`, margin + 4, y);
-        y += 4;
-    }
-
-    y += 2;
-    checkPageBreak(15);
-    doc.setFont("helvetica", "bold");
-    doc.text("Terms & Conditions:", margin, y);
-    doc.setFont("helvetica", "normal");
-    y += 4.5;
-    for (let tc of tcs) {
-        checkPageBreak(5);
-        doc.text(`•  ${tc}`, margin + 4, y);
-        y += 4;
-    }
-
-    y += 6;
 
     // 12. Signatures Block
     checkPageBreak(30);
@@ -1138,8 +1021,11 @@ export const generateQuotationPDF = (quotation: any) => {
         doc.text("WEBFLORA TECHNOLOGIES PRIVATE LIMITED", pageWidth - margin, pageHeight - 10, { align: "right" });
     }
 
-    // Save with unique ID
-    doc.save(`WF_Quotation_${quotation.quotationNo || "000"}.pdf`);
+    // Save with unique ID if downloading
+    if (shouldDownload) {
+        doc.save(`WF_Quotation_${quotation.quotationNo || "000"}.pdf`);
+    }
+    return doc;
 };
 
 // =========================================================================
@@ -1373,7 +1259,7 @@ export const generateAgreementPDF = async (agreement: any) => {
     doc.setTextColor(SLATE_600_RGB[0], SLATE_600_RGB[1], SLATE_600_RGB[2]);
     doc.text([
         "IOC Colony, Kumhrar, Patna, Bihar - 800026",
-        "Email: hello.webflora@gmail.com",
+        "Email: info@webfloratechnologies.com",
         "Website: www.webfloratechnologies.com"
     ], pageWidth - 24, 27, { align: "right", lineHeightFactor: 1.3 });
 

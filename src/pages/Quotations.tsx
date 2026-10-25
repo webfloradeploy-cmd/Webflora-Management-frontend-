@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import PageHeader from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
-import { Plus, Search, Edit, Trash2, Eye, FileDown, MessageSquare, X } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Eye, FileDown, MessageSquare, X, CheckSquare, Clock, DollarSign, FileText, CheckCircle2, Mail, Send, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -17,6 +17,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
@@ -38,10 +39,9 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { useQuotations, useCreateQuotation, useUpdateQuotation, useDeleteQuotation } from "@/hooks/useQuotations";
+import { useQuotations, useCreateQuotation, useUpdateQuotation, useDeleteQuotation, useSendQuotationEmail } from "@/hooks/useQuotations";
 import { useLeads } from "@/hooks/useLeads";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useToast } from "@/hooks/use-toast";
 import { formatDate } from "@/utils/dateUtils";
 import { generateQuotationPDF } from "@/utils/pdfGenerator";
 import { DatePicker } from "@/components/ui/date-picker";
@@ -50,15 +50,373 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 
 const formatCurrency = (value: number) =>
-  new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(value);
+  new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(value || 0);
+
+const getProjectTypesList = (str?: string): string[] =>
+  (str || "").split(",").map(t => t.trim()).filter(Boolean);
+
+// Dynamic adjustment of defaults based on the selected project type(s)
+const adjustDefaultsForProjectType = (typesArray: string[]) => {
+  const hasWebsite = typesArray.some(t => /website/i.test(t));
+  const hasMobile = typesArray.some(t => /mobile|app/i.test(t));
+  const hasERP = typesArray.some(t => /erp/i.test(t));
+  const hasSoftware = typesArray.some(t => /software/i.test(t));
+  const hasDesign = typesArray.some(t => /ui|ux|design/i.test(t));
+  const hasSEO = typesArray.some(t => /\bseo\b|search engine/i.test(t));
+  const hasMarketing = typesArray.some(t => /marketing|social|brand|advertis|shoot|video|photo|content/i.test(t));
+
+  if (hasMobile) {
+    return {
+      scopeOfWork: "• Native / Cross-Platform Mobile Application Development (iOS & Android).\n• Splash Screen & User Onboarding Flows.\n• Secure Mobile Authentication & User Profile Management.\n• Real-Time Push Notification Engine Integration.\n• In-App Payment Gateway Integration.\n• Offline Data Synchronization & Security Layers.",
+      timeline: [
+        { stage: "UI/UX App Wireframing", days: 7 },
+        { stage: "API & Backend Construction", days: 10 },
+        { stage: "Cross-Platform Mobile Coding", days: 15 },
+        { stage: "App Store & Play Store Release", days: 6 }
+      ],
+      deliverables: [
+        "iOS App Bundle (IPA File / TestFlight Release)",
+        "Android App Package (APK/AAB Store Bundle)",
+        "Server API Source Code & Database Setup",
+        "Admin Dashboard Panel Access",
+        "App Store Submission Support & Guidelines"
+      ],
+      websitePages: [
+        { page: "Splash / Onboarding Screen", included: true },
+        { page: "Sign In / Sign Up Screen", included: true },
+        { page: "User Profile & Settings", included: true },
+        { page: "Core Home Dashboard", included: true },
+        { page: "Product / Service Catalog", included: true },
+        { page: "Advanced Search & Filter", included: true },
+        { page: "Cart & Checkout View", included: true },
+        { page: "Push Notifications Screen", included: true },
+        { page: "Help & Support Tickets", included: true }
+      ],
+      adminPanelFeatures: [
+        { feature: "Dashboard Overview", included: true },
+        { feature: "Manage Registered Users", included: true },
+        { feature: "Push Notification Scheduler", included: true },
+        { feature: "Transaction & Payment Logs", included: true },
+        { feature: "Enquiry & Support Tickets", included: true },
+        { feature: "Logout Session", included: true }
+      ],
+      additionalServices: [
+        { service: "Google Play Store Setup & Publishing", price: 2500, isMonthly: false },
+        { service: "Apple App Store Setup & Publishing", price: 8500, isMonthly: false },
+        { service: "Annual App Maintenance & Updates (AMC)", price: 15000, isMonthly: false }
+      ],
+      paymentTerms: [
+        "50% Advance mobilization deposit",
+        "30% Upon beta build presentation",
+        "20% Before final source code and store release"
+      ],
+      termsAndConditions: [
+        "Source code will be handed over only after full settlement of payment.",
+        "Development timeline will commence immediately after receipt of the advance payment.",
+        "Store approval timelines are subject to Apple and Google policies.",
+        "Any scope modification or addition of features outside this list will be billed separately."
+      ]
+    };
+  } else if (hasERP) {
+    return {
+      scopeOfWork: "• Fully integrated custom ERP system for internal corporate workflows.\n• Modular business processes automation.\n• High transactional integrity database schema.\n• Role-based Access Control (RBAC) security.\n• Real-time automated reporting tools.",
+      timeline: [
+        { stage: "Requirement Mapping & Architecture Design", days: 10 },
+        { stage: "Database Model & Core System Coding", days: 15 },
+        { stage: "Custom Modules Implementation", days: 20 },
+        { stage: "Integration Testing & Staff Training", days: 8 }
+      ],
+      deliverables: [
+        "Secure Private Cloud ERP Deployment",
+        "Modular ERP Source Code Transfer",
+        "Custom Database Structure Schemas",
+        "ERP Operations Training Manual",
+        "3-Month Free Support SLA Agreement"
+      ],
+      websitePages: [
+        { page: "ERP Central Dashboard", included: true },
+        { page: "HR & Employee Portal", included: true },
+        { page: "Inventory & Warehouse Stock", included: true },
+        { page: "Sales & Client CRM Module", included: true },
+        { page: "Purchase & Vendor Manager", included: true },
+        { page: "Finance Ledger Accounts", included: true },
+        { page: "Reports & Analytics Wizard", included: true },
+        { page: "Access Control Settings", included: true }
+      ],
+      adminPanelFeatures: [
+        { feature: "System Configurations", included: true },
+        { feature: "Audit Logs & Activity Monitor", included: true },
+        { feature: "User Role Controller (RBAC)", included: true },
+        { feature: "Automated Backup Scheduler", included: true },
+        { feature: "API Access Keys Console", included: true },
+        { feature: "Logout Session", included: true }
+      ],
+      additionalServices: [
+        { service: "Dedicated Cloud Server Setup", price: 6000, isMonthly: false },
+        { service: "Annual ERP Maintenance & Technical SLA", price: 25000, isMonthly: false }
+      ],
+      paymentTerms: [
+        "40% Advance mobilization deposit",
+        "30% Upon core modules milestone",
+        "30% Upon final deployment and staff training"
+      ],
+      termsAndConditions: [
+        "Source code will be handed over only after full settlement of payment.",
+        "Development timeline will commence immediately after receipt of the advance payment.",
+        "Custom requirements outside the signed scope will be estimated separately.",
+        "Full administrative credentials handed over upon final clearance."
+      ]
+    };
+  } else if (hasSoftware) {
+    return {
+      scopeOfWork: "• Bespoke custom software solution tailored to specific business processes.\n• Advanced custom database configuration.\n• High-security data transmission layers.\n• Interactive dashboards and export tools.",
+      timeline: [
+        { stage: "System Modeling & DB Design", days: 7 },
+        { stage: "Custom Backend Engine Dev", days: 18 },
+        { stage: "UI Dashboard Integration", days: 12 },
+        { stage: "User Acceptance Testing (UAT)", days: 5 }
+      ],
+      deliverables: [
+        "Custom Software Web Application / Executables",
+        "Complete Repository Source Code",
+        "Technical & API Reference Documentation",
+        "Automated DB Backups Routine Setup",
+        "System Administration Training"
+      ],
+      websitePages: [
+        { page: "Main Operations Portal", included: true },
+        { page: "User Management Module", included: true },
+        { page: "Interactive Data Grid Views", included: true },
+        { page: "Digital Document Repository", included: true },
+        { page: "Billing & Transaction Controller", included: true },
+        { page: "Reports & Analytics Customizer", included: true },
+        { page: "Global Alerts & Activity Log", included: true },
+        { page: "Account Settings Panel", included: true }
+      ],
+      adminPanelFeatures: [
+        { feature: "Global Software Settings", included: true },
+        { feature: "Access Control Console (RBAC)", included: true },
+        { feature: "Custom Query Executor", included: true },
+        { feature: "System Integrity Logs", included: true },
+        { feature: "Logout Session", included: true }
+      ],
+      additionalServices: [
+        { service: "Cloud Hosting & Dedicated Server Setup", price: 5000, isMonthly: false },
+        { service: "Annual Maintenance Contract (AMC)", price: 18000, isMonthly: false }
+      ],
+      paymentTerms: [
+        "50% Advance mobilization deposit",
+        "30% Upon beta version completion",
+        "20% Upon final handover and deployment"
+      ],
+      termsAndConditions: [
+        "Source code will be handed over only after full settlement of payment.",
+        "Development timeline will commence immediately after receipt of the advance payment.",
+        "Up to 30 days post-launch bug fixing support is included.",
+        "Any scope modification outside this list will be billed separately."
+      ]
+    };
+  } else if (hasDesign) {
+    return {
+      scopeOfWork: "• Professional UI/UX wireframing and pixel-perfect high-fidelity interface design.\n• Modern branding, typography scales, and style guide creation.\n• Interactive clickable prototype development in Figma.",
+      timeline: [
+        { stage: "Research & Brand Discovery", days: 4 },
+        { stage: "Low-Fidelity Wireframes", days: 6 },
+        { stage: "High-Fidelity Mockups Development", days: 8 },
+        { stage: "Figma Prototyping & Design Revisions", days: 4 }
+      ],
+      deliverables: [
+        "Figma Source File (Full Link & Edit Access)",
+        "High-Resolution Visual Page Exports",
+        "Developer Specifications Hand-Off Document",
+        "Custom System UI Style Guide",
+        "Interactive Figma Prototype Link"
+      ],
+      websitePages: [
+        { page: "Brand Moodboard & Typography Scales", included: true },
+        { page: "Low-Fidelity Wireframe Flows", included: true },
+        { page: "High-Fidelity UI Screens Mockups", included: true },
+        { page: "Design System Elements & UI Kit", included: true },
+        { page: "Interactive Clickable Prototype", included: true }
+      ],
+      adminPanelFeatures: [],
+      additionalServices: [],
+      paymentTerms: [
+        "50% Advance deposit to initiate design sprints",
+        "50% Upon final presentation and design mockups hand-off"
+      ],
+      termsAndConditions: [
+        "Visual design mockups source files will be delivered upon final milestone clearance.",
+        "Up to three rounds of wireframe layout revisions are included in this design phase.",
+        "Specialized stock media, typography licenses, or vector icon packs are billed at cost if needed."
+      ]
+    };
+  } else if (hasMarketing) {
+    return {
+      scopeOfWork: "• Brand development, content strategy, and target audience mapping.\n• High-resolution creative assets and promotional media production.\n• Campaign scheduling, ad set optimization, and multi-channel reach.\n• Performance monitoring, KPI audits, and monthly conversion reports.",
+      timeline: [
+        { stage: "Discovery & Campaign Strategy", days: 4 },
+        { stage: "Asset Production & Content Creation", days: 8 },
+        { stage: "Campaign Launch & Audience Targeting", days: 10 },
+        { stage: "Performance Review & Reporting", days: 4 }
+      ],
+      deliverables: [
+        "Brand Identity & Campaign Assets",
+        "Social Media & Content Calendar",
+        "High-Resolution Visual Creative Files",
+        "Target Audience Strategy Plan",
+        "Monthly Campaign Performance & ROI Report"
+      ],
+      websitePages: [],
+      adminPanelFeatures: [],
+      additionalServices: [],
+      paymentTerms: [
+        "50% Advance mobilization payment to initiate production",
+        "50% Upon campaign delivery and launch"
+      ],
+      termsAndConditions: [
+        "Campaign activities commence immediately upon receipt of advance mobilization deposit.",
+        "Paid advertising budgets and ad spend are paid directly to platforms unless separately agreed.",
+        "Content usage rights, duration, and permitted platforms are confirmed before production.",
+        "Deliverables will be formally handed over upon full payment clearance."
+      ]
+    };
+  } else if (hasSEO) {
+    return {
+      scopeOfWork: "• Comprehensive Technical SEO audit and competitor analysis.\n• High-intent keyword research, mapping, and core strategy.\n• On-page optimization including meta tags, title tags, heading structure, and image alt text.\n• Core Web Vitals audit and page speed recommendation implementation.\n• Google Analytics 4 and Google Search Console integration and dashboard setup.\n• Monthly rank tracking and traffic growth reports.",
+      timeline: [
+        { stage: "Audit & Keyword Research", days: 7 },
+        { stage: "On-Page Optimization", days: 15 },
+        { stage: "Technical & Core Web Vitals Fixes", days: 10 },
+        { stage: "Analytics Integration & Schema Markup", days: 5 }
+      ],
+      deliverables: [
+        "SEO Technical Audit Document",
+        "Keyword Research & Target Strategy Map",
+        "GA4 & Search Console Account Integration",
+        "On-page Schema Markup Implementation",
+        "First Month Optimization & Rank Report"
+      ],
+      websitePages: [],
+      adminPanelFeatures: [],
+      additionalServices: [],
+      paymentTerms: [
+        "100% Advance monthly retainer payment to initiate optimization cycles.",
+        "Monthly invoices are due within the first 5 business days of each service cycle."
+      ],
+      termsAndConditions: [
+        "Search engine rankings are subject to Google algorithm updates and competitive index changes.",
+        "Monthly optimization actions commence immediately after receipt of advance retainer payment.",
+        "Analytics accounts, GSC logs, and CMS website admin access must be provided by the client.",
+        "Detailed performance reports are provided at the end of each monthly cycle."
+      ]
+    };
+  } else if (hasWebsite) {
+    return {
+      scopeOfWork: "• Modern responsive website design and frontend engineering.\n• Administrative content management dashboard.\n• Interactive contact forms and lead capture integration.\n• On-page Search Engine Optimization (SEO) structured tags.\n• SSL configuration, cross-browser compatibility, and speed optimization.",
+      timeline: [
+        { stage: "UI/UX Design", days: 5 },
+        { stage: "Development", days: 10 },
+        { stage: "Testing & Deployment", days: 3 }
+      ],
+      deliverables: [
+        "Responsive Website",
+        "Admin Dashboard Access",
+        "Source Code Delivery",
+        "Basic SEO Setup",
+        "SSL Configuration",
+        "Deployment Support",
+        "1-Hour Training Session"
+      ],
+      websitePages: [
+        { page: "Home", included: true },
+        { page: "About Us", included: true },
+        { page: "Services / Solutions", included: true },
+        { page: "Portfolio / Case Studies", included: true },
+        { page: "Products / Pricing", included: true },
+        { page: "Blog / Articles", included: true },
+        { page: "Careers", included: true },
+        { page: "Contact Us & Enquiry Form", included: true },
+        { page: "Privacy Policy & Terms", included: true }
+      ],
+      adminPanelFeatures: [
+        { feature: "Dashboard Overview & Stats", included: true },
+        { feature: "Manage Enquiries & Leads", included: true },
+        { feature: "Manage Content / CMS", included: true },
+        { feature: "Manage Gallery & Media", included: true },
+        { feature: "SEO Meta Settings", included: true },
+        { feature: "Logout Session", included: true }
+      ],
+      additionalServices: [
+        { service: "Cloud Hosting & Server Setup", price: 3000, isMonthly: false },
+        { service: "Domain Registration (.com / .in)", price: 1000, isMonthly: false },
+        { service: "Annual Maintenance Contract (AMC)", price: 8000, isMonthly: false }
+      ],
+      paymentTerms: [
+        "50% Advance mobilization deposit",
+        "30% During development phase",
+        "20% Before final source code hand-off"
+      ],
+      termsAndConditions: [
+        "Source code will be handed over only after full settlement of payment.",
+        "Development timeline will commence immediately after receipt of the advance payment.",
+        "Up to three rounds of visual layout reviews are included. Additional updates are billable.",
+        "Any scope modification or addition of features outside this list will be billed separately."
+      ]
+    };
+  } else {
+    // Pure custom or unselected non-development project (empty defaults, no website items)
+    return {
+      scopeOfWork: "",
+      timeline: [],
+      deliverables: [],
+      websitePages: [],
+      adminPanelFeatures: [],
+      additionalServices: [],
+      paymentTerms: [
+        "50% Advance mobilization payment",
+        "50% Upon project completion and handover"
+      ],
+      termsAndConditions: [
+        "Work commences immediately upon receipt of the advance payment.",
+        "Any scope modification outside this agreement will be estimated separately.",
+        "Deliverables will be formally handed over upon full payment clearance."
+      ]
+    };
+  }
+};
+
+const getDefaultFormData = (initialType: string = "Website Development") => {
+  const types = getProjectTypesList(initialType);
+  const defaults = adjustDefaultsForProjectType(types);
+
+  return {
+    leadId: "",
+    quotationNo: "",
+    date: new Date().toISOString().split('T')[0],
+    validUntil: "",
+    projectName: "",
+    projectType: initialType,
+    projectOverview: "",
+    items: [{ service: "", description: "", quantity: 1, price: 0, amount: 0, isMonthly: false }],
+    totalAmount: 0,
+    status: "Draft",
+    notes: "",
+    ...defaults
+  };
+};
 
 const Quotations = () => {
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [selectedQuotation, setSelectedQuotation] = useState<any | null>(null);
+  const [viewingQuotation, setViewingQuotation] = useState<any | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [quotationToDelete, setQuotationToDelete] = useState<any | null>(null);
   const [searchParams] = useSearchParams();
+
+  const [formData, setFormData] = useState(getDefaultFormData(""));
 
   useEffect(() => {
     const leadId = searchParams.get("leadId");
@@ -68,108 +426,24 @@ const Quotations = () => {
     }
   }, [searchParams]);
 
-  const [formData, setFormData] = useState({
-    leadId: "",
-    quotationNo: "",
-    date: new Date().toISOString().split('T')[0],
-    validUntil: "",
-    projectName: "",
-    projectType: "Website Development",
-    projectOverview: "",
-    scopeOfWork: "",
-    websitePages: [
-      { page: "Home", included: true },
-      { page: "About Us", included: true },
-      { page: "Why Choose Us", included: true },
-      { page: "Our Strength", included: true },
-      { page: "Our Journey", included: true },
-      { page: "Vision & Mission", included: true },
-      { page: "Value", included: true },
-      { page: "Promoters & Directors", included: true },
-      { page: "Certification", included: true },
-      { page: "Our Products", included: true },
-      { page: "Quality & Nutrition", included: true },
-      { page: "Quality Control Process", included: true },
-      { page: "In House Laboratory", included: true },
-      { page: "Raw Materials Standards", included: true },
-      { page: "Scientific Formulation", included: true },
-      { page: "Feed Safety Consistency", included: true },
-      { page: "FAQs on FCR, Growth Nutrition", included: true },
-      { page: "Manufacturing", included: true },
-      { page: "Knowledge Centre", included: true },
-      { page: "Dealer Support", included: true },
-      { page: "Become a Dealer", included: true },
-      { page: "Channel Partner Benefits", included: true },
-      { page: "Farmer Support Program", included: true },
-      { page: "Bulk Order Enquiry", included: true },
-      { page: "Technical Guidance", included: true },
-      { page: "Brochure", included: true },
-      { page: "Our Gallery", included: true },
-      { page: "Career", included: true },
-      { page: "Enquiry", included: true },
-      { page: "Contact Us", included: true },
-      { page: "Product Mock Design", included: true }
-    ],
-    adminPanelFeatures: [
-      { feature: "Dashboard", included: true },
-      { feature: "Manage Enquiry", included: true },
-      { feature: "Manage Gallery", included: true },
-      { feature: "Manage Careers", included: true },
-      { feature: "Manage Rates of Product", included: true },
-      { feature: "Manage Notifications", included: true },
-      { feature: "Logout", included: true }
-    ],
-    items: [{ service: "", description: "", quantity: 1, price: 0, amount: 0 }],
-    totalAmount: 0,
-    timeline: [
-      { stage: "UI/UX Design", days: 5 },
-      { stage: "Development", days: 10 },
-      { stage: "Testing & Deployment", days: 3 }
-    ],
-    deliverables: [
-      "Responsive Website",
-      "Admin Dashboard Access",
-      "Source Code Delivery",
-      "Basic SEO Setup",
-      "SSL Configuration",
-      "Deployment Support",
-      "1-Hour Training Session"
-    ],
-    paymentTerms: [
-      "50% Advance mobilization deposit",
-      "30% During development phase",
-      "20% Before final source code hand-off"
-    ],
-    additionalServices: [
-      { service: "Cloud Hosting & Server Setup", price: 3000 },
-      { service: "Domain Registration (.com / .in)", price: 1000 },
-      { service: "Annual Maintenance Contract (AMC)", price: 8000 }
-    ],
-    termsAndConditions: [
-      "Source code will be handed over only after full settlement of payment.",
-      "Development timeline will commence immediately after receipt of the advance payment.",
-      "Up to three rounds of visual layout reviews are included. Additional updates are billable.",
-      "Any scope modification or addition of features outside this list will be billed separately."
-    ],
-    status: "Draft",
-    notes: "",
-  });
-
-  const isPureSeoProject = (() => {
-    const current = formData.projectType ? formData.projectType.split(", ").filter(Boolean) : [];
-    return current.includes("SEO & Marketing") && 
-      !current.some(t => ["Website Development", "Mobile App Development", "ERP System", "Custom Software"].includes(t));
-  })();
+  // Check if current types require software/web checklists
+  const currentTypes = getProjectTypesList(formData.projectType);
+  const hasWebsite = currentTypes.some(t => /website/i.test(t));
+  const hasMobileApp = currentTypes.some(t => /mobile|app/i.test(t));
+  const hasERP = currentTypes.some(t => /erp/i.test(t));
+  const hasCustomSoftware = currentTypes.some(t => /software/i.test(t));
+  const hasUIUX = currentTypes.some(t => /ui|ux|design/i.test(t));
+  const hasChecklistDev = hasWebsite || hasMobileApp || hasERP || hasCustomSoftware || hasUIUX;
+  const showChecklists = hasChecklistDev || formData.websitePages.length > 0 || formData.adminPanelFeatures.length > 0;
 
   const getFormChecklistHeaders = () => {
-    const current = formData.projectType ? formData.projectType.split(", ").filter(Boolean) : [];
-    if (current.includes("Mobile App Development")) {
+    if (hasMobileApp) {
       return { left: "Mobile App Screens Checklist", right: "Admin / API Features Checklist" };
-    } else if (current.includes("ERP System")) {
+    } else if (hasERP) {
       return { left: "ERP Modules Checklist", right: "System Control Features Checklist" };
-    } else if (current.includes("UI/UX Design")) {
+    } else if (hasUIUX) {
       return { left: "Design Screens & Wireframes", right: "UX Assets & Prototypes Checklist" };
-    } else if (current.includes("Custom Software")) {
+    } else if (hasCustomSoftware) {
       return { left: "Custom Modules Checklist", right: "Admin Panel & Security Config" };
     }
     return { left: "Website Pages Checklist", right: "Admin Panel Features Checklist" };
@@ -177,227 +451,58 @@ const Quotations = () => {
 
   const formHeaders = getFormChecklistHeaders();
 
-  const adjustDefaultsForProjectType = (typesArray: string[]) => {
-    if (typesArray.includes("Mobile App Development")) {
-      return {
-        scopeOfWork: "• Native / Cross-Platform Mobile Application Development (iOS & Android).\n• Elegant Splash Screen & User Onboarding Flows.\n• Secure Mobile Authentication & User Profile Management.\n• Real-Time Push Notification Engine Integration.\n• Secure In-App Payment Gateway Integration.\n• Offline Data Synchronization Capabilities.",
-        timeline: [
-          { stage: "UI/UX App Wireframing", days: 7 },
-          { stage: "API & Backend Construction", days: 10 },
-          { stage: "Cross-Platform Mobile Coding", days: 15 },
-          { stage: "App Store & Play Store Release", days: 6 }
-        ],
-        deliverables: [
-          "iOS App Bundle (IPA File/TestFlight Release)",
-          "Android App Package (APK/AAB Store Bundle)",
-          "Server API Source Code & Schema Setup",
-          "Admin Dashboard Panel Access",
-          "App Store Submission Support & Guidelines"
-        ],
-        websitePages: [
-          { page: "Splash Onboarding", included: true },
-          { page: "Sign In / Sign Up Screen", included: true },
-          { page: "User Profile View", included: true },
-          { page: "Core Home Dashboard", included: true },
-          { page: "Product details Screen", included: true },
-          { page: "Advanced Search & Filter", included: true },
-          { page: "Shopping Cart Module", included: true },
-          { page: "Payment Checkout View", included: true },
-          { page: "App Settings & Push Toggle", included: true },
-          { page: "Help & Technical Feedback", included: true }
-        ],
-        adminPanelFeatures: [
-          { feature: "Dashboard Overview", included: true },
-          { feature: "Manage Registered Users", included: true },
-          { feature: "Push Notification Scheduler", included: true },
-          { feature: "Transaction & Payment Logs", included: true },
-          { feature: "Enquiry & Support Tickets", included: true },
-          { feature: "Logout session", included: true }
-        ]
-      };
-    } else if (typesArray.includes("ERP System")) {
-      return {
-        scopeOfWork: "• Fully integrated custom ERP system for internal corporate workflows.\n• Modular business processes automation.\n• Symmetrical database schema for high transactional integrity.\n• Role-based Access Control (RBAC) setup.\n• Real-time automated reporting tools.",
-        timeline: [
-          { stage: "Requirement Mapping & Architecture Design", days: 10 },
-          { stage: "Database Model & Core System Coding", days: 15 },
-          { stage: "Custom Modules Implementation", days: 20 },
-          { stage: "Integration Testing & Staff Training", days: 8 }
-        ],
-        deliverables: [
-          "Secure Private Cloud ERP Deployment",
-          "Modular ERP Source Code Transfer",
-          "Custom Database Structure Schemas",
-          "ERP Operations Training Manual",
-          "3-Month Free Support SLA Agreement"
-        ],
-        websitePages: [
-          { page: "ERP Central Dashboard", included: true },
-          { page: "HR & Employee Portal", included: true },
-          { page: "Inventory & Warehouse Stock", included: true },
-          { page: "Sales & Client CRM Module", included: true },
-          { page: "Purchase & Vendor Manager", included: true },
-          { page: "Finance Ledger Accounts", included: true },
-          { page: "Reports & Analytics Wizard", included: true },
-          { page: "Access Control Settings", included: true }
-        ],
-        adminPanelFeatures: [
-          { feature: "System Configurations", included: true },
-          { feature: "Audit logs & Activity Monitor", included: true },
-          { feature: "User Role Controller (RBAC)", included: true },
-          { feature: "Automated Backup Scheduler", included: true },
-          { feature: "API Access Keys Console", included: true },
-          { feature: "Logout Session", included: true }
-        ]
-      };
-    } else if (typesArray.includes("Custom Software")) {
-      return {
-        scopeOfWork: "• Bespoke custom software solution tailored to specific client technical requirements.\n• Advanced custom database configuration.\n• High-security data transmission layers.\n• Interactive dashboards and query interfaces.",
-        timeline: [
-          { stage: "System Modeling & DB Design", days: 7 },
-          { stage: "Custom Backend Engine Dev", days: 18 },
-          { stage: "UI Dashboard Integration", days: 12 },
-          { stage: "User Acceptance Testing (UAT)", days: 5 }
-        ],
-        deliverables: [
-          "Custom Software Executables / Web URL",
-          "Complete Repository Source Code",
-          "Technical & API Reference Documentation",
-          "Automated DB Backups Routine Setup",
-          "System Administration Training"
-        ],
-        websitePages: [
-          { page: "Main Operations Portal", included: true },
-          { page: "User Management Module", included: true },
-          { page: "Interactive Data Grid Views", included: true },
-          { page: "Digital Document Repository", included: true },
-          { page: "Billing & Transaction Controller", included: true },
-          { page: "Bespoke Report Customizer", included: true },
-          { page: "Global Alerts Panel", included: true },
-          { page: "Account Settings Panel", included: true }
-        ],
-        adminPanelFeatures: [
-          { feature: "Global Software Settings", included: true },
-          { feature: "Access Control Console (RBAC)", included: true },
-          { feature: "Custom Query Executor", included: true },
-          { feature: "System Integrity Logs", included: true },
-          { feature: "Logout Session", included: true }
-        ]
-      };
-    } else if (typesArray.includes("UI/UX Design")) {
-      return {
-        scopeOfWork: "• Professional UI/UX wireframing and pixel-perfect high-fidelity interface design.\n• Symmetrical branding and style guide creation.\n• Interactive prototype development in Figma.",
-        timeline: [
-          { stage: "Research & Brand Discovery", days: 4 },
-          { stage: "Low-Fidelity Wireframes", days: 6 },
-          { stage: "High-Fidelity Mockups Development", days: 8 },
-          { stage: "Figma Prototyping & Design Revisions", days: 4 }
-        ],
-        deliverables: [
-          "Figma Source File (Link & Access)",
-          "High-Resolution Visual Page Exports",
-          "Developer Specifications Hand-Off Document",
-          "Custom System UI Style Guide",
-          "Interactive Figma Prototype Link"
-        ],
-        websitePages: [
-          { page: "Moodboards & Typography Scales", included: true },
-          { page: "Low-fidelity wireframe flows", included: true },
-          { page: "High-fidelity UI Screens Mockup", included: true },
-          { page: "Design System Elements UI", included: true },
-          { page: "Interactive Screen Prototypes", included: true },
-          { page: "Custom Vector Logo & Brand Assets", included: true }
-        ],
-        adminPanelFeatures: []
-      };
-    } else if (typesArray.includes("SEO & Marketing")) {
-      return {
-        scopeOfWork: "• Comprehensive Technical SEO audit and competitor analysis.\n• Keyword research, mapping, and core keyword strategy.\n• On-page optimization including meta tags, title tags, heading structure, and image alt text.\n• Core Web Vitals audit and page speed recommendation implementation.\n• Google Analytics 4 and Google Search Console integration and dashboard setup.\n• Monthly rank tracking and traffic growth reports.",
-        timeline: [
-          { stage: "Audit & Keyword Research", days: 7 },
-          { stage: "On-Page Optimization", days: 15 },
-          { stage: "Technical & Core Web Vitals Fixes", days: 10 },
-          { stage: "Analytics Integration & Schema Markup", days: 5 }
-        ],
-        deliverables: [
-          "SEO Technical Audit Document",
-          "Keyword Research & Target Strategy Map",
-          "GA4 & Search Console Account Integration",
-          "On-page Schema Markup Implementation",
-          "First Month Optimization & Rank Report"
-        ],
-        websitePages: [],
-        adminPanelFeatures: []
-      };
-    } else {
-      return {
-        scopeOfWork: "",
-        timeline: [
-          { stage: "UI/UX Design", days: 5 },
-          { stage: "Development", days: 10 },
-          { stage: "Testing & Deployment", days: 3 }
-        ],
-        deliverables: [
-          "Responsive Website",
-          "Admin Dashboard Access",
-          "Source Code Delivery",
-          "Basic SEO Setup",
-          "SSL Configuration",
-          "Deployment Support",
-          "1-Hour Training Session"
-        ],
-        websitePages: [
-          { page: "Home", included: true },
-          { page: "About Us", included: true },
-          { page: "Why Choose Us", included: true },
-          { page: "Our Strength", included: true },
-          { page: "Our Journey", included: true },
-          { page: "Vision & Mission", included: true },
-          { page: "Value", included: true },
-          { page: "Promoters & Directors", included: true },
-          { page: "Certification", included: true },
-          { page: "Our Products", included: true },
-          { page: "Quality & Nutrition", included: true },
-          { page: "Quality Control Process", included: true },
-          { page: "In House Laboratory", included: true },
-          { page: "Raw Materials Standards", included: true },
-          { page: "Scientific Formulation", included: true },
-          { page: "Feed Safety Consistency", included: true },
-          { page: "FAQs on FCR, Growth Nutrition", included: true },
-          { page: "Manufacturing", included: true },
-          { page: "Knowledge Centre", included: true },
-          { page: "Dealer Support", included: true },
-          { page: "Become a Dealer", included: true },
-          { page: "Channel Partner Benefits", included: true },
-          { page: "Farmer Support Program", included: true },
-          { page: "Bulk Order Enquiry", included: true },
-          { page: "Technical Guidance", included: true },
-          { page: "Brochure", included: true },
-          { page: "Our Gallery", included: true },
-          { page: "Career", included: true },
-          { page: "Enquiry", included: true },
-          { page: "Contact Us", included: true },
-          { page: "Product Mock Design", included: true }
-        ],
-        adminPanelFeatures: [
-          { feature: "Dashboard", included: true },
-          { feature: "Manage Enquiry", included: true },
-          { feature: "Manage Gallery", included: true },
-          { feature: "Manage Careers", included: true },
-          { feature: "Manage Rates of Product", included: true },
-          { feature: "Manage Notifications", included: true },
-          { feature: "Logout", included: true }
-        ]
-      };
-    }
-  };
-
   const { data: quotations = [], isLoading, error } = useQuotations();
   const { data: leads = [] } = useLeads();
   const createQuotation = useCreateQuotation();
   const updateQuotation = useUpdateQuotation();
   const deleteQuotation = useDeleteQuotation();
-  const { toast } = useToast();
+  const sendQuotationEmail = useSendQuotationEmail();
+
+  // Email modal state
+  const [emailQuotation, setEmailQuotation] = useState<any | null>(null);
+  const [emailForm, setEmailForm] = useState({
+    email: "",
+    subject: "",
+    message: ""
+  });
+
+  const handleOpenEmailDialog = (q: any) => {
+    setEmailQuotation(q);
+    setEmailForm({
+      email: q.leadId?.email || "",
+      subject: `Project Quotation: ${q.projectName || "Project"} - Webflora Technologies`,
+      message: `Dear ${q.leadId?.leadName || "Valued Client"},\n\nWe are pleased to present the official quotation for "${q.projectName || "your project"}".\n\nPlease review the attached quotation PDF for detailed milestone timeline, technical deliverables, and pricing breakdown.\n\nWarm regards,\nWebflora Technologies Team`
+    });
+  };
+
+  const handleSendEmailSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!emailQuotation) return;
+    try {
+      let pdfBase64 = "";
+      try {
+        const doc: any = generateQuotationPDF(emailQuotation, false);
+        if (doc) {
+          pdfBase64 = doc.output("datauristring").split(",")[1];
+        }
+      } catch (pdfErr) {
+        console.error("Failed to generate PDF attachment:", pdfErr);
+      }
+
+      await sendQuotationEmail.mutateAsync({
+        id: emailQuotation._id,
+        data: {
+          email: emailForm.email,
+          subject: emailForm.subject,
+          message: emailForm.message,
+          pdfBase64
+        }
+      });
+      setEmailQuotation(null);
+    } catch (err) {
+      console.error("Failed to send quotation email:", err);
+    }
+  };
 
   // Dynamic lists helper states
   const [newPageName, setNewPageName] = useState("");
@@ -410,7 +515,6 @@ const Quotations = () => {
   const [newAddServiceName, setNewAddServiceName] = useState("");
   const [newAddServicePrice, setNewAddServicePrice] = useState(0);
 
-  // Helper handlers to modify dynamic arrays in formData
   const addWebsitePage = () => {
     if (!newPageName.trim()) return;
     setFormData(prev => ({
@@ -560,10 +664,6 @@ const Quotations = () => {
     setNewAddServicePrice(0);
   };
 
-  const addMonthlyCharge = () => {
-    addAdditionalService(true);
-  };
-
   const removeAdditionalService = (index: number) => {
     setFormData(prev => ({
       ...prev,
@@ -571,22 +671,15 @@ const Quotations = () => {
     }));
   };
 
-  const filteredQuotations = quotations.filter(
-    (q: any) =>
-      q.quotationNo?.toLowerCase().includes(search.toLowerCase()) ||
-      q.projectName?.toLowerCase().includes(search.toLowerCase()) ||
-      q.leadId?.leadName?.toLowerCase().includes(search.toLowerCase())
-  );
-
   const calculateTotal = (items: any[]) => {
-    return items.reduce((sum, item) => sum + (item.quantity * item.price), 0);
+    return items.reduce((sum, item) => sum + ((Number(item.quantity) || 1) * (Number(item.price) || 0)), 0);
   };
 
   const handleItemChange = (index: number, field: string, value: any) => {
     const newItems = [...formData.items];
     newItems[index] = { ...newItems[index], [field]: value };
     if (field === "quantity" || field === "price") {
-      newItems[index].amount = newItems[index].quantity * newItems[index].price;
+      newItems[index].amount = (Number(newItems[index].quantity) || 1) * (Number(newItems[index].price) || 0);
     }
     const newTotal = calculateTotal(newItems);
     setFormData({ ...formData, items: newItems, totalAmount: newTotal });
@@ -602,7 +695,7 @@ const Quotations = () => {
   const addMonthlyItem = () => {
     setFormData({
       ...formData,
-      items: [...formData.items, { service: "Services Charge", description: "", quantity: 1, price: 0, amount: 0, isMonthly: true }]
+      items: [...formData.items, { service: "Monthly Retainer / Service", description: "", quantity: 1, price: 0, amount: 0, isMonthly: true }]
     });
   };
 
@@ -618,100 +711,33 @@ const Quotations = () => {
       await createQuotation.mutateAsync(formData);
       setIsCreateDialogOpen(false);
       resetForm();
-      toast({ title: "Success", description: "Quotation created successfully" });
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.response?.data?.message || "Failed to create quotation",
-        variant: "destructive",
-      });
+    } catch {
+      // Toast notification is handled in mutation hook
     }
   };
 
+  // Crucial: Load EXACT saved quotation properties without forcibly re-injecting deleted services/pages
   const handleEditClick = (q: any) => {
     setFormData({
-      leadId: q.leadId?._id || "",
+      leadId: q.leadId?._id || (typeof q.leadId === 'string' ? q.leadId : ""),
       quotationNo: q.quotationNo || "",
       date: q.date ? new Date(q.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
       validUntil: q.validUntil ? new Date(q.validUntil).toISOString().split('T')[0] : "",
       projectName: q.projectName || "",
-      projectType: q.projectType || "Website Development",
+      projectType: q.projectType || "",
       projectOverview: q.projectOverview || "",
       scopeOfWork: q.scopeOfWork || "",
-      websitePages: q.websitePages?.length ? q.websitePages : [
-        { page: "Home", included: true },
-        { page: "About Us", included: true },
-        { page: "Why Choose Us", included: true },
-        { page: "Our Strength", included: true },
-        { page: "Our Journey", included: true },
-        { page: "Vision & Mission", included: true },
-        { page: "Value", included: true },
-        { page: "Promoters & Directors", included: true },
-        { page: "Certification", included: true },
-        { page: "Our Products", included: true },
-        { page: "Quality & Nutrition", included: true },
-        { page: "Quality Control Process", included: true },
-        { page: "In House Laboratory", included: true },
-        { page: "Raw Materials Standards", included: true },
-        { page: "Scientific Formulation", included: true },
-        { page: "Feed Safety Consistency", included: true },
-        { page: "FAQs on FCR, Growth Nutrition", included: true },
-        { page: "Manufacturing", included: true },
-        { page: "Knowledge Centre", included: true },
-        { page: "Dealer Support", included: true },
-        { page: "Become a Dealer", included: true },
-        { page: "Channel Partner Benefits", included: true },
-        { page: "Farmer Support Program", included: true },
-        { page: "Bulk Order Enquiry", included: true },
-        { page: "Technical Guidance", included: true },
-        { page: "Brochure", included: true },
-        { page: "Our Gallery", included: true },
-        { page: "Career", included: true },
-        { page: "Enquiry", included: true },
-        { page: "Contact Us", included: true },
-        { page: "Product Mock Design", included: true }
-      ],
-      adminPanelFeatures: q.adminPanelFeatures?.length ? q.adminPanelFeatures : [
-        { feature: "Dashboard", included: true },
-        { feature: "Manage Enquiry", included: true },
-        { feature: "Manage Gallery", included: true },
-        { feature: "Manage Careers", included: true },
-        { feature: "Manage Rates of Product", included: true },
-        { feature: "Manage Notifications", included: true },
-        { feature: "Logout", included: true }
-      ],
-      items: q.items?.length ? q.items : [{ service: "", description: "", quantity: 1, price: 0, amount: 0 }],
-      totalAmount: q.totalAmount || 0,
-      timeline: q.timeline?.length ? q.timeline : [
-        { stage: "UI/UX Design", days: 5 },
-        { stage: "Development", days: 10 },
-        { stage: "Testing & Deployment", days: 3 }
-      ],
-      deliverables: q.deliverables?.length ? q.deliverables : [
-        "Responsive Website",
-        "Admin Dashboard Access",
-        "Source Code Delivery",
-        "Basic SEO Setup",
-        "SSL Configuration",
-        "Deployment Support",
-        "1-Hour Training Session"
-      ],
-      paymentTerms: q.paymentTerms?.length ? q.paymentTerms : [
-        "50% Advance mobilization deposit",
-        "30% During development phase",
-        "20% Before final source code hand-off"
-      ],
-      additionalServices: q.additionalServices?.length ? q.additionalServices : [
-        { service: "Cloud Hosting & Server Setup", price: 3000 },
-        { service: "Domain Registration (.com / .in)", price: 1000 },
-        { service: "Annual Maintenance Contract (AMC)", price: 8000 }
-      ],
-      termsAndConditions: q.termsAndConditions?.length ? q.termsAndConditions : [
-        "Source code will be handed over only after full settlement of payment.",
-        "Development timeline will commence immediately after receipt of the advance payment.",
-        "Up to three rounds of visual layout reviews are included. Additional updates are billable.",
-        "Any scope modification or addition of features outside this list will be billed separately."
-      ],
+      websitePages: Array.isArray(q.websitePages) ? q.websitePages : [],
+      adminPanelFeatures: Array.isArray(q.adminPanelFeatures) ? q.adminPanelFeatures : [],
+      items: (Array.isArray(q.items) && q.items.length > 0)
+        ? q.items
+        : [{ service: "", description: "", quantity: 1, price: 0, amount: 0, isMonthly: false }],
+      totalAmount: Number(q.totalAmount || 0),
+      timeline: Array.isArray(q.timeline) ? q.timeline : [],
+      deliverables: Array.isArray(q.deliverables) ? q.deliverables : [],
+      paymentTerms: Array.isArray(q.paymentTerms) ? q.paymentTerms : [],
+      additionalServices: Array.isArray(q.additionalServices) ? q.additionalServices : [],
+      termsAndConditions: Array.isArray(q.termsAndConditions) ? q.termsAndConditions : [],
       status: q.status || "Draft",
       notes: q.notes || "",
     });
@@ -729,13 +755,8 @@ const Quotations = () => {
       });
       setIsEditDialogOpen(false);
       resetForm();
-      toast({ title: "Success", description: "Quotation updated successfully" });
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.response?.data?.message || "Failed to update quotation",
-        variant: "destructive",
-      });
+    } catch {
+      // Toast handled by mutation hook
     }
   };
 
@@ -744,113 +765,35 @@ const Quotations = () => {
     try {
       await deleteQuotation.mutateAsync(quotationToDelete._id);
       setQuotationToDelete(null);
-      toast({ title: "Success", description: "Quotation deleted successfully" });
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.response?.data?.message || "Failed to delete quotation",
-        variant: "destructive",
-      });
+    } catch {
+      // Toast handled by mutation hook
     }
   };
 
-  const resetForm = () => {
-    setFormData({
-      leadId: "",
-      quotationNo: "",
-      date: new Date().toISOString().split('T')[0],
-      validUntil: "",
-      projectName: "",
-      projectType: "Website Development",
-      projectOverview: "",
-      scopeOfWork: "",
-      websitePages: [
-        { page: "Home", included: true },
-        { page: "About Us", included: true },
-        { page: "Why Choose Us", included: true },
-        { page: "Our Strength", included: true },
-        { page: "Our Journey", included: true },
-        { page: "Vision & Mission", included: true },
-        { page: "Value", included: true },
-        { page: "Promoters & Directors", included: true },
-        { page: "Certification", included: true },
-        { page: "Our Products", included: true },
-        { page: "Quality & Nutrition", included: true },
-        { page: "Quality Control Process", included: true },
-        { page: "In House Laboratory", included: true },
-        { page: "Raw Materials Standards", included: true },
-        { page: "Scientific Formulation", included: true },
-        { page: "Feed Safety Consistency", included: true },
-        { page: "FAQs on FCR, Growth Nutrition", included: true },
-        { page: "Manufacturing", included: true },
-        { page: "Knowledge Centre", included: true },
-        { page: "Dealer Support", included: true },
-        { page: "Become a Dealer", included: true },
-        { page: "Channel Partner Benefits", included: true },
-        { page: "Farmer Support Program", included: true },
-        { page: "Bulk Order Enquiry", included: true },
-        { page: "Technical Guidance", included: true },
-        { page: "Brochure", included: true },
-        { page: "Our Gallery", included: true },
-        { page: "Career", included: true },
-        { page: "Enquiry", included: true },
-        { page: "Contact Us", included: true },
-        { page: "Product Mock Design", included: true }
-      ],
-      adminPanelFeatures: [
-        { feature: "Dashboard", included: true },
-        { feature: "Manage Enquiry", included: true },
-        { feature: "Manage Gallery", included: true },
-        { feature: "Manage Careers", included: true },
-        { feature: "Manage Rates of Product", included: true },
-        { feature: "Manage Notifications", included: true },
-        { feature: "Logout", included: true }
-      ],
-      items: [{ service: "", description: "", quantity: 1, price: 0, amount: 0 }],
-      totalAmount: 0,
-      timeline: [
-        { stage: "UI/UX Design", days: 5 },
-        { stage: "Development", days: 10 },
-        { stage: "Testing & Deployment", days: 3 }
-      ],
-      deliverables: [
-        "Responsive Website",
-        "Admin Dashboard Access",
-        "Source Code Delivery",
-        "Basic SEO Setup",
-        "SSL Configuration",
-        "Deployment Support",
-        "1-Hour Training Session"
-      ],
-      paymentTerms: [
-        "50% Advance mobilization deposit",
-        "30% During development phase",
-        "20% Before final source code hand-off"
-      ],
-      additionalServices: [
-        { service: "Cloud Hosting & Server Setup", price: 3000 },
-        { service: "Domain Registration (.com / .in)", price: 1000 },
-        { service: "Annual Maintenance Contract (AMC)", price: 8000 }
-      ],
-      termsAndConditions: [
-        "Source code will be handed over only after full settlement of payment.",
-        "Development timeline will commence immediately after receipt of the advance payment.",
-        "Up to three rounds of visual layout reviews are included. Additional updates are billable.",
-        "Any scope modification or addition of features outside this list will be billed separately."
-      ],
-      status: "Draft",
-      notes: "",
-    });
+  const resetForm = (targetType: string = "") => {
+    setFormData(getDefaultFormData(targetType));
     setSelectedQuotation(null);
   };
+
+  const filteredQuotations = (Array.isArray(quotations) ? quotations : []).filter((q: any) => {
+    const matchesSearch =
+      q.quotationNo?.toLowerCase().includes(search.toLowerCase()) ||
+      q.projectName?.toLowerCase().includes(search.toLowerCase()) ||
+      q.projectType?.toLowerCase().includes(search.toLowerCase()) ||
+      q.leadId?.leadName?.toLowerCase().includes(search.toLowerCase()) ||
+      q.status?.toLowerCase().includes(search.toLowerCase());
+
+    const matchesStatus = statusFilter === "all" || (q.status || "").toLowerCase() === statusFilter.toLowerCase();
+    return matchesSearch && matchesStatus;
+  });
 
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "Draft": return <Badge variant="secondary">Draft</Badge>;
-      case "Sent": return <Badge variant="outline" className="bg-blue-500/10 text-blue-500">Sent</Badge>;
-      case "Accepted": return <Badge variant="outline" className="bg-green-500/10 text-green-500">Accepted</Badge>;
-      case "Rejected": return <Badge variant="outline" className="bg-red-500/10 text-red-500">Rejected</Badge>;
-      case "Expired": return <Badge variant="outline" className="bg-gray-500/10 text-gray-500">Expired</Badge>;
+      case "Sent": return <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/20">Sent</Badge>;
+      case "Accepted": return <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">Accepted</Badge>;
+      case "Rejected": return <Badge variant="outline" className="bg-red-500/10 text-red-500 border-red-500/20">Rejected</Badge>;
+      case "Expired": return <Badge variant="outline" className="bg-gray-500/10 text-gray-500 border-gray-500/20">Expired</Badge>;
       default: return <Badge variant="secondary">{status}</Badge>;
     }
   };
@@ -867,8 +810,6 @@ const Quotations = () => {
       </div>
     );
   }
-
-
 
   const renderQuotationForm = () => {
     return (
@@ -891,9 +832,17 @@ const Quotations = () => {
                   <SelectValue placeholder="Select lead" />
                 </SelectTrigger>
                 <SelectContent>
-                  {leads.map((lead: any) => (
-                    <SelectItem key={lead._id} value={lead._id}>{lead.leadName}</SelectItem>
+                  {(Array.isArray(leads) ? leads : []).map((lead: any) => (
+                    <SelectItem key={lead._id} value={lead._id}>
+                      {lead.leadName} {lead.companyName ? `(${lead.companyName})` : ''}
+                    </SelectItem>
                   ))}
+                  {/* Fallback option if lead is attached from selectedQuotation but not in active leads list */}
+                  {formData.leadId && selectedQuotation?.leadId && typeof selectedQuotation.leadId === 'object' && !leads.some((l: any) => l._id === formData.leadId) && (
+                    <SelectItem value={formData.leadId}>
+                      {selectedQuotation.leadId.leadName || "Selected Lead"}
+                    </SelectItem>
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -902,7 +851,7 @@ const Quotations = () => {
               <Input
                 value={formData.quotationNo}
                 onChange={(e) => setFormData({ ...formData, quotationNo: e.target.value })}
-                placeholder="Auto-generated if empty"
+                placeholder="Auto-generated if empty (e.g. WT-QTN-2026-0001)"
               />
             </div>
           </div>
@@ -920,6 +869,7 @@ const Quotations = () => {
               <DatePicker
                 date={formData.validUntil}
                 setDate={(v) => setFormData({ ...formData, validUntil: v })}
+                placeholder="Optional (Default: 30 days)"
               />
             </div>
           </div>
@@ -929,24 +879,23 @@ const Quotations = () => {
             <Input
               value={formData.projectName}
               onChange={(e) => setFormData({ ...formData, projectName: e.target.value })}
-              placeholder="e.g. WebFlora E-Commerce Website"
+              placeholder="e.g. Corporate Web Application or SEO Growth Sprint"
               required
             />
           </div>
 
           <div className="space-y-2">
             <Label className="text-xs font-semibold">Project Types (Select multiple or add custom)</Label>
-            
+
             {/* Selected Types Badges */}
-            <div className="flex flex-wrap gap-1.5 min-h-[32px] p-2 border rounded-md bg-slate-50/50">
-              {(formData.projectType ? formData.projectType.split(", ").filter(Boolean) : []).map((type, idx) => (
+            <div className="flex flex-wrap gap-1.5 min-h-[32px] p-2 border rounded-md bg-muted/20">
+              {currentTypes.map((type, idx) => (
                 <Badge key={idx} variant="secondary" className="flex items-center gap-1 bg-primary/10 text-primary border-primary/20 text-[10px]">
                   {type}
                   <X
                     className="h-2.5 w-2.5 cursor-pointer hover:text-destructive"
                     onClick={() => {
-                      const current = formData.projectType ? formData.projectType.split(", ").filter(Boolean) : [];
-                      const updated = current.filter(t => t !== type);
+                      const updated = currentTypes.filter(t => t !== type);
                       const adjustments = adjustDefaultsForProjectType(updated);
                       setFormData({
                         ...formData,
@@ -957,7 +906,7 @@ const Quotations = () => {
                   />
                 </Badge>
               ))}
-              {(formData.projectType ? formData.projectType.split(", ").filter(Boolean) : []).length === 0 && (
+              {currentTypes.length === 0 && (
                 <span className="text-[11px] text-muted-foreground self-center">No types selected yet.</span>
               )}
             </div>
@@ -968,12 +917,12 @@ const Quotations = () => {
                 "Website Development",
                 "Mobile App Development",
                 "ERP System",
-                "SEO & Marketing",
+                "Digital Marketing",
+                "SEO Optimization",
                 "UI/UX Design",
                 "Custom Software"
               ].map((type) => {
-                const current = formData.projectType ? formData.projectType.split(", ").filter(Boolean) : [];
-                const isSelected = current.includes(type);
+                const isSelected = currentTypes.includes(type);
                 return (
                   <Button
                     key={type}
@@ -982,8 +931,8 @@ const Quotations = () => {
                     className="h-6 text-[10px] px-2"
                     onClick={() => {
                       const updated = isSelected
-                        ? current.filter(t => t !== type)
-                        : [...current, type];
+                        ? currentTypes.filter(t => t !== type)
+                        : [...currentTypes, type];
                       const adjustments = adjustDefaultsForProjectType(updated);
                       setFormData({
                         ...formData,
@@ -1002,23 +951,20 @@ const Quotations = () => {
             <div className="flex gap-2 mt-1.5 max-w-sm">
               <Input
                 id="custom-project-type"
-                placeholder="Custom Type (e.g. CRM System)"
+                placeholder="Custom Type (e.g. CRM System, Branding)"
                 className="h-7 text-xs"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     e.preventDefault();
                     const val = (e.target as HTMLInputElement).value.trim();
-                    if (val) {
-                      const current = formData.projectType ? formData.projectType.split(", ").filter(Boolean) : [];
-                      if (!current.includes(val)) {
-                        const updated = [...current, val];
-                        const adjustments = adjustDefaultsForProjectType(updated);
-                        setFormData({
-                          ...formData,
-                          projectType: updated.join(", "),
-                          ...adjustments
-                        });
-                      }
+                    if (val && !currentTypes.includes(val)) {
+                      const updated = [...currentTypes, val];
+                      const adjustments = adjustDefaultsForProjectType(updated);
+                      setFormData({
+                        ...formData,
+                        projectType: updated.join(", "),
+                        ...adjustments
+                      });
                       (e.target as HTMLInputElement).value = "";
                     }
                   }
@@ -1030,17 +976,14 @@ const Quotations = () => {
                 onClick={() => {
                   const el = document.getElementById("custom-project-type") as HTMLInputElement;
                   const val = el?.value.trim();
-                  if (val) {
-                    const current = formData.projectType ? formData.projectType.split(", ").filter(Boolean) : [];
-                    if (!current.includes(val)) {
-                      const updated = [...current, val];
-                      const adjustments = adjustDefaultsForProjectType(updated);
-                      setFormData({
-                        ...formData,
-                        projectType: updated.join(", "),
-                        ...adjustments
-                      });
-                    }
+                  if (val && !currentTypes.includes(val)) {
+                    const updated = [...currentTypes, val];
+                    const adjustments = adjustDefaultsForProjectType(updated);
+                    setFormData({
+                      ...formData,
+                      projectType: updated.join(", "),
+                      ...adjustments
+                    });
                     el.value = "";
                   }
                 }}
@@ -1070,12 +1013,15 @@ const Quotations = () => {
                 type="button"
                 variant="link"
                 className="h-auto p-0 text-xs text-primary"
-                onClick={() => setFormData({
-                  ...formData,
-                  scopeOfWork: formData.scopeOfWork + "\n• Dynamic & static responsive layouts\n• Complete administrative control panels\n• Interactive contact pages & SMS/Email triggers\n• Search Engine Optimization (SEO) structured schema\n• High performance loading speeds & SSL encryption"
-                })}
+                onClick={() => {
+                  const adjustments = adjustDefaultsForProjectType(currentTypes);
+                  setFormData({
+                    ...formData,
+                    scopeOfWork: adjustments.scopeOfWork || "• Requirement Discovery & Architecture Mapping\n• Core Implementation & Sprints\n• Testing, Deployment & Verification\n• Handover & Documentation"
+                  });
+                }}
               >
-                Insert Scope Template
+                Reset to Type Scope Template
               </Button>
             </div>
             <Textarea
@@ -1086,35 +1032,58 @@ const Quotations = () => {
             />
           </div>
 
-          {isPureSeoProject ? (
-            <div className="border-2 border-dashed border-slate-200 rounded-xl p-6 text-center bg-slate-50/50 mt-3">
-              <p className="text-sm font-medium text-slate-500">Website Checklist Disabled</p>
-              <p className="text-xs text-slate-400 mt-1">This quotation is configured for a pure SEO & Marketing project. Website pages and admin panel modules checklists are hidden.</p>
+          {!showChecklists ? (
+            <div className="border border-dashed border-border rounded-xl p-5 text-center bg-muted/20 mt-3 space-y-2">
+              <div className="inline-flex p-2 rounded-full bg-primary/10 text-primary mb-1">
+                <CheckSquare className="w-5 h-5" />
+              </div>
+              <p className="text-sm font-semibold">Checklists Hidden for Non-Development Project</p>
+              <p className="text-xs text-muted-foreground max-w-md mx-auto">
+                Website pages & admin feature checklists only apply to Website, Mobile App, ERP, and Software development projects. For {formData.projectType || "this service"}, use the Scope of Work and Deliverables tabs.
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-7 text-xs"
+                onClick={() => {
+                  setFormData(prev => ({
+                    ...prev,
+                    websitePages: [{ page: "Service Deliverable 1", included: true }]
+                  }));
+                }}
+              >
+                + Enable Custom Item Checklist
+              </Button>
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-4 border-t pt-3">
-              {/* Pages Checklist */}
+              {/* Pages / Screens Checklist */}
               <div className="space-y-2">
-                <Label className="text-xs font-semibold">{formHeaders.left}</Label>
+                <div className="flex justify-between items-center">
+                  <Label className="text-xs font-semibold">{formHeaders.left}</Label>
+                  <span className="text-[10px] text-muted-foreground">({formData.websitePages.filter(p => p.included).length} Included)</span>
+                </div>
                 <div className="flex gap-2">
                   <Input
                     value={newPageName}
                     onChange={(e) => setNewPageName(e.target.value)}
-                    placeholder="Page Name"
+                    placeholder="Page / Screen Name"
                     className="h-7 text-xs"
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addWebsitePage(); } }}
                   />
-                  <Button type="button" size="sm" onClick={addWebsitePage} className="h-7">Add</Button>
+                  <Button type="button" size="sm" onClick={addWebsitePage} className="h-7 text-xs">Add</Button>
                 </div>
-                <div className="border rounded-md p-2 space-y-1.5 max-h-[160px] overflow-y-auto bg-slate-50/50">
+                <div className="border rounded-md p-2 space-y-1.5 max-h-[160px] overflow-y-auto bg-muted/20">
                   {formData.websitePages.map((page, index) => (
-                    <div key={index} className="flex items-center justify-between py-0.5 border-b border-slate-100 last:border-0">
+                    <div key={index} className="flex items-center justify-between py-0.5 border-b border-border/50 last:border-0">
                       <div className="flex items-center space-x-2">
                         <Checkbox
                           id={`page-${index}`}
                           checked={page.included}
                           onCheckedChange={() => toggleWebsitePage(index)}
                         />
-                        <label htmlFor={`page-${index}`} className="text-xs font-medium cursor-pointer">
+                        <label htmlFor={`page-${index}`} className={`text-xs cursor-pointer ${page.included ? "font-medium text-foreground" : "text-muted-foreground line-through"}`}>
                           {page.page}
                         </label>
                       </div>
@@ -1122,38 +1091,45 @@ const Quotations = () => {
                         type="button"
                         variant="ghost"
                         size="icon"
-                        className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                        className="h-5 w-5 text-muted-foreground hover:text-destructive"
                         onClick={() => removeWebsitePage(index)}
                       >
                         <X className="h-3 w-3" />
                       </Button>
                     </div>
                   ))}
+                  {formData.websitePages.length === 0 && (
+                    <p className="text-[11px] text-muted-foreground text-center py-2">No pages added.</p>
+                  )}
                 </div>
               </div>
 
-              {/* Admin Checklist */}
+              {/* Admin / Modules Checklist */}
               <div className="space-y-2">
-                <Label className="text-xs font-semibold">{formHeaders.right}</Label>
+                <div className="flex justify-between items-center">
+                  <Label className="text-xs font-semibold">{formHeaders.right}</Label>
+                  <span className="text-[10px] text-muted-foreground">({formData.adminPanelFeatures.filter(f => f.included).length} Included)</span>
+                </div>
                 <div className="flex gap-2">
                   <Input
                     value={newFeatureName}
                     onChange={(e) => setNewFeatureName(e.target.value)}
-                    placeholder="Module/Feature"
+                    placeholder="Module / Feature Name"
                     className="h-7 text-xs"
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addAdminFeature(); } }}
                   />
-                  <Button type="button" size="sm" onClick={addAdminFeature} className="h-7">Add</Button>
+                  <Button type="button" size="sm" onClick={addAdminFeature} className="h-7 text-xs">Add</Button>
                 </div>
-                <div className="border rounded-md p-2 space-y-1.5 max-h-[160px] overflow-y-auto bg-slate-50/50">
+                <div className="border rounded-md p-2 space-y-1.5 max-h-[160px] overflow-y-auto bg-muted/20">
                   {formData.adminPanelFeatures.map((feat, index) => (
-                    <div key={index} className="flex items-center justify-between py-0.5 border-b border-slate-100 last:border-0">
+                    <div key={index} className="flex items-center justify-between py-0.5 border-b border-border/50 last:border-0">
                       <div className="flex items-center space-x-2">
                         <Checkbox
                           id={`feat-${index}`}
                           checked={feat.included}
                           onCheckedChange={() => toggleAdminFeature(index)}
                         />
-                        <label htmlFor={`feat-${index}`} className="text-xs font-medium cursor-pointer">
+                        <label htmlFor={`feat-${index}`} className={`text-xs cursor-pointer ${feat.included ? "font-medium text-foreground" : "text-muted-foreground line-through"}`}>
                           {feat.feature}
                         </label>
                       </div>
@@ -1161,13 +1137,16 @@ const Quotations = () => {
                         type="button"
                         variant="ghost"
                         size="icon"
-                        className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                        className="h-5 w-5 text-muted-foreground hover:text-destructive"
                         onClick={() => removeAdminFeature(index)}
                       >
                         <X className="h-3 w-3" />
                       </Button>
                     </div>
                   ))}
+                  {formData.adminPanelFeatures.length === 0 && (
+                    <p className="text-[11px] text-muted-foreground text-center py-2">No modules added.</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -1177,13 +1156,14 @@ const Quotations = () => {
         {/* Tab 3: Timeline & Deliverables */}
         <TabsContent value="timeline" className="space-y-4 mt-4">
           <div className="space-y-2">
-            <Label className="text-xs font-semibold">Project Implementation Timeline Stages</Label>
+            <Label className="text-xs font-semibold">Implementation Timeline Stages</Label>
             <div className="flex gap-2 items-center">
               <Input
                 value={newStageName}
                 onChange={(e) => setNewStageName(e.target.value)}
                 placeholder="Stage Description"
                 className="h-7 text-xs"
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addTimelineStage(); } }}
               />
               <Input
                 type="number"
@@ -1192,11 +1172,11 @@ const Quotations = () => {
                 placeholder="Days"
                 className="w-16 h-7 text-xs"
               />
-              <Button type="button" size="sm" onClick={addTimelineStage} className="h-7">Add</Button>
+              <Button type="button" size="sm" onClick={addTimelineStage} className="h-7 text-xs">Add</Button>
             </div>
-            <div className="border rounded-md p-2 space-y-1 bg-slate-50/50 max-h-[140px] overflow-y-auto">
+            <div className="border rounded-md p-2 space-y-1 bg-muted/20 max-h-[140px] overflow-y-auto">
               {formData.timeline.map((stage, index) => (
-                <div key={index} className="flex items-center justify-between text-xs py-1 border-b">
+                <div key={index} className="flex items-center justify-between text-xs py-1 border-b border-border/50 last:border-0">
                   <span>{stage.stage}</span>
                   <div className="flex items-center gap-2 font-bold">
                     <span>{stage.days} Days</span>
@@ -1213,7 +1193,7 @@ const Quotations = () => {
                 </div>
               ))}
               <div className="text-right text-xs font-bold pt-2 text-primary">
-                Total Estimated Duration: {formData.timeline.reduce((sum, s) => sum + s.days, 0)} Days
+                Total Estimated Duration: {formData.timeline.reduce((sum, s) => sum + (Number(s.days) || 0), 0)} Days
               </div>
             </div>
           </div>
@@ -1226,12 +1206,13 @@ const Quotations = () => {
                 onChange={(e) => setNewDeliverable(e.target.value)}
                 placeholder="Deliverable Description"
                 className="h-7 text-xs"
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addDeliverable(); } }}
               />
-              <Button type="button" size="sm" onClick={addDeliverable} className="h-7">Add</Button>
+              <Button type="button" size="sm" onClick={addDeliverable} className="h-7 text-xs">Add</Button>
             </div>
-            <div className="border rounded-md p-2 space-y-1 bg-slate-50/50 max-h-[120px] overflow-y-auto">
+            <div className="border rounded-md p-2 space-y-1 bg-muted/20 max-h-[120px] overflow-y-auto">
               {formData.deliverables.map((item, index) => (
-                <div key={index} className="flex items-center justify-between text-xs py-1 border-b last:border-0">
+                <div key={index} className="flex items-center justify-between text-xs py-1 border-b border-border/50 last:border-0">
                   <span>• {item}</span>
                   <Button
                     type="button"
@@ -1244,6 +1225,9 @@ const Quotations = () => {
                   </Button>
                 </div>
               ))}
+              {formData.deliverables.length === 0 && (
+                <p className="text-[11px] text-muted-foreground text-center py-2">No deliverables added.</p>
+              )}
             </div>
           </div>
         </TabsContent>
@@ -1275,21 +1259,21 @@ const Quotations = () => {
                   <div key={index} className="grid grid-cols-12 gap-2 items-start p-2 border rounded-lg bg-muted/20">
                     <div className="col-span-5 space-y-0.5">
                       <div className="flex items-center justify-between">
-                        <Label className="text-[9px]">Service/Module</Label>
+                        <Label className="text-[9px]">Service / Module</Label>
                         <button
                           type="button"
                           onClick={() => toggleItemMonthly(index)}
                           className={`text-[9px] px-1.5 py-0.5 rounded font-semibold transition-all cursor-pointer border ${
                             isMonthly
                               ? "bg-orange-500 text-white border-orange-600 shadow-sm"
-                              : "bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 hover:border-slate-300"
+                              : "bg-muted text-muted-foreground border-border hover:border-slate-400"
                           }`}
                         >
                           {isMonthly ? "✓ Monthly" : "+ Set Monthly"}
                         </button>
                       </div>
                       <Input
-                        placeholder="Service"
+                        placeholder="Service / Deliverable Name"
                         value={item.service}
                         onChange={(e) => handleItemChange(index, "service", e.target.value)}
                         required
@@ -1313,7 +1297,7 @@ const Quotations = () => {
                         type="number"
                         placeholder="Qty"
                         value={item.quantity || ""}
-                        onChange={(e) => handleItemChange(index, "quantity", e.target.value === "" ? 0 : Number(e.target.value))}
+                        onChange={(e) => handleItemChange(index, "quantity", e.target.value === "" ? 1 : Number(e.target.value))}
                         required
                         className="h-7 text-xs"
                       />
@@ -1326,7 +1310,7 @@ const Quotations = () => {
                         type="button"
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7 text-destructive animate-pulse"
+                        className="h-7 w-7 text-destructive hover:bg-destructive/10"
                         onClick={() => removeItem(index)}
                         disabled={formData.items.length === 1}
                       >
@@ -1340,13 +1324,17 @@ const Quotations = () => {
           </div>
 
           <div className="space-y-2 border-t pt-3">
-            <Label className="text-xs font-semibold">Additional Services / Annual Maintenance (AMC)</Label>
+            <div className="flex justify-between items-center">
+              <Label className="text-xs font-semibold">Additional Services / Annual Maintenance (AMC)</Label>
+              <span className="text-[10px] text-muted-foreground">(Optional / Optional Add-ons)</span>
+            </div>
             <div className="flex gap-2 items-center flex-wrap sm:flex-nowrap">
               <Input
                 value={newAddServiceName}
                 onChange={(e) => setNewAddServiceName(e.target.value)}
-                placeholder="Hosting, AMC, Domain, etc."
+                placeholder="Custom Hosting, AMC, Domain, etc."
                 className="h-7 text-xs flex-1"
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addAdditionalService(false); } }}
               />
               <Input
                 type="number"
@@ -1368,11 +1356,11 @@ const Quotations = () => {
                 + Monthly Charge
               </Button>
             </div>
-            <div className="border rounded-md p-2 space-y-1 bg-slate-50/50 max-h-[100px] overflow-y-auto">
+            <div className="border rounded-md p-2 space-y-1 bg-muted/20 max-h-[100px] overflow-y-auto">
               {formData.additionalServices.map((service, index) => {
                 const isMonthly = checkIsMonthly(service);
                 return (
-                  <div key={index} className="flex items-center justify-between text-xs py-1 border-b last:border-0">
+                  <div key={index} className="flex items-center justify-between text-xs py-1 border-b border-border/50 last:border-0">
                     <div className="flex items-center gap-2">
                       <span>{service.service}</span>
                       <button
@@ -1381,7 +1369,7 @@ const Quotations = () => {
                         className={`text-[9px] px-1.5 py-0.5 rounded font-semibold transition-all cursor-pointer border ${
                           isMonthly
                             ? "bg-orange-500 text-white border-orange-600 shadow-sm"
-                            : "bg-slate-100 text-slate-500 border-slate-200 dark:bg-slate-800 dark:text-slate-400 hover:border-slate-300"
+                            : "bg-muted text-muted-foreground border-border hover:border-slate-400"
                         }`}
                       >
                         {isMonthly ? "✓ Monthly" : "+ Set Monthly"}
@@ -1402,6 +1390,21 @@ const Quotations = () => {
                   </div>
                 );
               })}
+              {formData.additionalServices.length === 0 && (
+                <p className="text-[11px] text-muted-foreground text-center py-2">No additional or AMC services added.</p>
+              )}
+            </div>
+          </div>
+
+          {/* Real-time Pricing Summary Banner */}
+          <div className="flex justify-between items-center bg-muted/30 p-2.5 rounded-lg border border-border mt-3">
+            <div>
+              <p className="text-[10px] text-muted-foreground">Items Base Total</p>
+              <p className="text-sm font-semibold">{formatCurrency(formData.totalAmount)}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-[10px] text-muted-foreground">Total Quoted Investment</p>
+              <p className="text-base font-bold text-primary">{formatCurrency(formData.totalAmount)}</p>
             </div>
           </div>
         </TabsContent>
@@ -1417,12 +1420,13 @@ const Quotations = () => {
                   onChange={(e) => setNewPaymentTerm(e.target.value)}
                   placeholder="e.g. 50% mobilization advance"
                   className="h-7 text-xs"
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addPaymentTerm(); } }}
                 />
-                <Button type="button" size="sm" onClick={addPaymentTerm} className="h-7">Add</Button>
+                <Button type="button" size="sm" onClick={addPaymentTerm} className="h-7 text-xs">Add</Button>
               </div>
-              <div className="border rounded-md p-2 space-y-1 bg-slate-50/50 max-h-[110px] overflow-y-auto">
+              <div className="border rounded-md p-2 space-y-1 bg-muted/20 max-h-[110px] overflow-y-auto">
                 {formData.paymentTerms.map((term, index) => (
-                  <div key={index} className="flex items-center justify-between text-xs py-0.5 border-b last:border-0">
+                  <div key={index} className="flex items-center justify-between text-xs py-0.5 border-b border-border/50 last:border-0">
                     <span className="truncate pr-1">• {term}</span>
                     <Button
                       type="button"
@@ -1435,6 +1439,9 @@ const Quotations = () => {
                     </Button>
                   </div>
                 ))}
+                {formData.paymentTerms.length === 0 && (
+                  <p className="text-[11px] text-muted-foreground text-center py-2">No payment terms added.</p>
+                )}
               </div>
             </div>
 
@@ -1444,14 +1451,15 @@ const Quotations = () => {
                 <Input
                   value={newTC}
                   onChange={(e) => setNewTC(e.target.value)}
-                  placeholder="e.g. Source code upon full payment"
+                  placeholder="e.g. Handover upon full payment"
                   className="h-7 text-xs"
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addTC(); } }}
                 />
-                <Button type="button" size="sm" onClick={addTC} className="h-7">Add</Button>
+                <Button type="button" size="sm" onClick={addTC} className="h-7 text-xs">Add</Button>
               </div>
-              <div className="border rounded-md p-2 space-y-1 bg-slate-50/50 max-h-[110px] overflow-y-auto">
+              <div className="border rounded-md p-2 space-y-1 bg-muted/20 max-h-[110px] overflow-y-auto">
                 {formData.termsAndConditions.map((item, index) => (
-                  <div key={index} className="flex items-center justify-between text-xs py-0.5 border-b last:border-0">
+                  <div key={index} className="flex items-center justify-between text-xs py-0.5 border-b border-border/50 last:border-0">
                     <span className="truncate pr-1">• {item}</span>
                     <Button
                       type="button"
@@ -1464,6 +1472,9 @@ const Quotations = () => {
                     </Button>
                   </div>
                 ))}
+                {formData.termsAndConditions.length === 0 && (
+                  <p className="text-[11px] text-muted-foreground text-center py-2">No terms added.</p>
+                )}
               </div>
             </div>
           </div>
@@ -1511,7 +1522,7 @@ const Quotations = () => {
         title="Quotations"
         subtitle={`${quotations.length} total quotations`}
         actions={
-          <Button onClick={() => setIsCreateDialogOpen(true)}>
+          <Button onClick={() => { resetForm(""); setIsCreateDialogOpen(true); }}>
             <Plus className="w-4 h-4 mr-2" />
             Create Quotation
           </Button>
@@ -1519,15 +1530,33 @@ const Quotations = () => {
       />
 
       <div className="p-6 space-y-6">
-        {/* Search */}
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Search quotations..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-10"
-          />
+        {/* Search & Filters */}
+        <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+          <div className="relative w-full max-w-md">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Search by quote #, project, or lead..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+
+          {/* Quick Status Filter Tabs */}
+          <div className="flex flex-wrap gap-1">
+            {["all", "Draft", "Sent", "Accepted", "Rejected", "Expired"].map((st) => (
+              <Button
+                key={st}
+                type="button"
+                variant={statusFilter === st ? "default" : "outline"}
+                size="sm"
+                className="h-8 text-xs capitalize"
+                onClick={() => setStatusFilter(st)}
+              >
+                {st}
+              </Button>
+            ))}
+          </div>
         </div>
 
         {/* Quotations Table */}
@@ -1541,8 +1570,10 @@ const Quotations = () => {
           <div className="text-center py-20 border-2 border-dashed border-border rounded-xl">
             <MessageSquare className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-foreground mb-1">No quotations found</h3>
-            <p className="text-sm text-muted-foreground mb-6">Start by creating your first quotation.</p>
-            <Button onClick={() => setIsCreateDialogOpen(true)}>
+            <p className="text-sm text-muted-foreground mb-6">
+              {search || statusFilter !== "all" ? "No quotations match your search criteria." : "Start by creating your first quotation."}
+            </p>
+            <Button onClick={() => { resetForm(""); setIsCreateDialogOpen(true); }}>
               <Plus className="w-4 h-4 mr-2" /> Create Quotation
             </Button>
           </div>
@@ -1554,6 +1585,7 @@ const Quotations = () => {
                   <TableRow>
                     <TableHead className="font-bold py-4">Quotation #</TableHead>
                     <TableHead className="font-bold py-4">Project Name</TableHead>
+                    <TableHead className="font-bold py-4">Type</TableHead>
                     <TableHead className="font-bold py-4">Lead</TableHead>
                     <TableHead className="font-bold py-4">Date</TableHead>
                     <TableHead className="font-bold py-4">Total Amount</TableHead>
@@ -1570,8 +1602,11 @@ const Quotations = () => {
                       <TableCell className="text-sm py-3.5 font-semibold">
                         {q.projectName || "N/A"}
                       </TableCell>
+                      <TableCell className="text-xs py-3.5 text-muted-foreground">
+                        {q.projectType || "General"}
+                      </TableCell>
                       <TableCell className="text-sm py-3.5">
-                        {q.leadId?.leadName || "N/A"}
+                        {q.leadId?.leadName || (typeof q.leadId === 'string' ? "Lead Record" : "N/A")}
                       </TableCell>
                       <TableCell className="text-sm py-3.5">
                         {formatDate(q.date)}
@@ -1584,16 +1619,49 @@ const Quotations = () => {
                       </TableCell>
                       <TableCell className="text-right py-3.5">
                         <div className="flex justify-end gap-1">
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary"
-                            onClick={() => generateQuotationPDF(q)} title="Download PDF">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                            onClick={() => setViewingQuotation(q)}
+                            title="View Quotation"
+                          >
+                            <Eye className="h-4 w-4 text-emerald-500" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-orange-500"
+                            onClick={() => handleOpenEmailDialog(q)}
+                            title="Send via Email"
+                          >
+                            <Mail className="h-4 w-4 text-orange-500" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-primary"
+                            onClick={() => generateQuotationPDF(q)}
+                            title="Download PDF"
+                          >
                             <FileDown className="h-4 w-4 text-blue-500" />
                           </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary"
-                            onClick={() => handleEditClick(q)} title="Edit Quotation">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-primary"
+                            onClick={() => handleEditClick(q)}
+                            title="Edit Quotation"
+                          >
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                            onClick={() => setQuotationToDelete(q)} title="Delete Quotation">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                            onClick={() => setQuotationToDelete(q)}
+                            title="Delete Quotation"
+                          >
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
@@ -1606,6 +1674,274 @@ const Quotations = () => {
           </div>
         )}
       </div>
+
+      {/* View Quotation Preview Modal */}
+      <Dialog open={!!viewingQuotation} onOpenChange={() => setViewingQuotation(null)}>
+        <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <div className="flex justify-between items-center pr-6">
+              <DialogTitle className="text-lg flex items-center gap-2">
+                <FileText className="h-5 w-5 text-primary" />
+                Quotation {viewingQuotation?.quotationNo}
+              </DialogTitle>
+              {viewingQuotation && getStatusBadge(viewingQuotation.status)}
+            </div>
+            <DialogDescription className="text-xs text-muted-foreground">
+              Review full estimation parameters, pricing breakdown, and terms.
+            </DialogDescription>
+          </DialogHeader>
+
+          {viewingQuotation && (
+            <div className="space-y-4 text-sm mt-2">
+              {/* Header Info Banner */}
+              <div className="grid grid-cols-2 gap-3 p-3 bg-muted/30 rounded-lg border">
+                <div>
+                  <p className="text-[11px] text-muted-foreground">Client / Lead</p>
+                  <p className="font-semibold text-foreground">{viewingQuotation.leadId?.leadName || "Valued Client"}</p>
+                  {viewingQuotation.leadId?.email && (
+                    <p className="text-xs text-muted-foreground">{viewingQuotation.leadId.email}</p>
+                  )}
+                  {viewingQuotation.leadId?.contactNumber && (
+                    <p className="text-xs text-muted-foreground">Ph: {viewingQuotation.leadId.contactNumber}</p>
+                  )}
+                </div>
+                <div className="text-right space-y-0.5">
+                  <p className="text-[11px] text-muted-foreground">Project Title</p>
+                  <p className="font-semibold text-foreground">{viewingQuotation.projectName}</p>
+                  <p className="text-xs text-primary font-medium">{viewingQuotation.projectType || "General Services"}</p>
+                  <p className="text-xs text-muted-foreground">Date: {formatDate(viewingQuotation.date)}</p>
+                </div>
+              </div>
+
+              {/* Scope of Work */}
+              {viewingQuotation.scopeOfWork && (
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-primary" /> Scope of Work
+                  </p>
+                  <div className="p-2.5 bg-muted/20 rounded-md border text-xs whitespace-pre-line text-muted-foreground">
+                    {viewingQuotation.scopeOfWork}
+                  </div>
+                </div>
+              )}
+
+              {/* Modules / Screens (If present) */}
+              {(viewingQuotation.websitePages?.length > 0 || viewingQuotation.adminPanelFeatures?.length > 0) && (
+                <div className="grid grid-cols-2 gap-3 border rounded-lg p-3 bg-muted/10">
+                  {viewingQuotation.websitePages?.length > 0 && (
+                    <div>
+                      <p className="text-xs font-semibold mb-1">Screens & Pages</p>
+                      <ul className="space-y-1 max-h-[120px] overflow-y-auto text-xs text-muted-foreground">
+                        {viewingQuotation.websitePages.map((p: any, idx: number) => (
+                          <li key={idx} className="flex items-center gap-1.5">
+                            <span className={p.included !== false ? "text-emerald-500 font-bold" : "text-muted-foreground"}>✓</span>
+                            <span className={p.included !== false ? "" : "line-through opacity-60"}>{p.page || p}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {viewingQuotation.adminPanelFeatures?.length > 0 && (
+                    <div>
+                      <p className="text-xs font-semibold mb-1">Administrative Modules</p>
+                      <ul className="space-y-1 max-h-[120px] overflow-y-auto text-xs text-muted-foreground">
+                        {viewingQuotation.adminPanelFeatures.map((f: any, idx: number) => (
+                          <li key={idx} className="flex items-center gap-1.5">
+                            <span className={f.included !== false ? "text-emerald-500 font-bold" : "text-muted-foreground"}>✓</span>
+                            <span className={f.included !== false ? "" : "line-through opacity-60"}>{f.feature || f}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Cost Items Table */}
+              <div className="space-y-1.5">
+                <p className="text-xs font-semibold flex items-center gap-1.5">
+                  <DollarSign className="w-3.5 h-3.5 text-primary" /> Investment Breakdown
+                </p>
+                <div className="border rounded-lg overflow-hidden">
+                  <Table>
+                    <TableHeader className="bg-muted/40">
+                      <TableRow className="h-7 text-xs">
+                        <TableHead className="py-1">Service / Deliverable</TableHead>
+                        <TableHead className="py-1 text-center w-16">Qty</TableHead>
+                        <TableHead className="py-1 text-right w-24">Unit Cost</TableHead>
+                        <TableHead className="py-1 text-right w-24">Subtotal</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {(viewingQuotation.items || []).map((it: any, idx: number) => (
+                        <TableRow key={idx} className="h-8 text-xs">
+                          <TableCell className="py-1 font-medium">{it.service || "Service Module"}</TableCell>
+                          <TableCell className="py-1 text-center">{it.quantity || 1}</TableCell>
+                          <TableCell className="py-1 text-right">{formatCurrency(it.price || 0)}</TableCell>
+                          <TableCell className="py-1 text-right font-bold text-primary">
+                            {formatCurrency(it.amount || (it.quantity || 1) * (it.price || 0))}{it.isMonthly ? "/mo" : ""}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+
+              {/* Additional Services (Only if non-empty) */}
+              {Array.isArray(viewingQuotation.additionalServices) && viewingQuotation.additionalServices.filter((s: any) => s.service?.trim()).length > 0 && (
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold">Additional / AMC Services</p>
+                  <div className="border rounded-md p-2 bg-muted/20 space-y-1 text-xs">
+                    {viewingQuotation.additionalServices.map((as: any, idx: number) => (
+                      <div key={idx} className="flex justify-between items-center text-muted-foreground">
+                        <span>• {as.service}</span>
+                        <span className="font-semibold text-foreground">{formatCurrency(as.price)}{as.isMonthly ? "/mo" : ""}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Total Card */}
+              <div className="flex justify-between items-center p-3 bg-primary/10 rounded-lg border border-primary/20">
+                <span className="font-semibold text-sm">Total Quoted Investment</span>
+                <span className="text-lg font-bold text-primary">{formatCurrency(viewingQuotation.totalAmount)}</span>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="border-t pt-3 flex items-center justify-between">
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => viewingQuotation && generateQuotationPDF(viewingQuotation)}
+                className="text-xs"
+              >
+                <FileDown className="w-3.5 h-3.5 mr-1 text-blue-500" /> Download PDF
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const target = viewingQuotation;
+                  setViewingQuotation(null);
+                  handleOpenEmailDialog(target);
+                }}
+                className="text-xs text-orange-600 border-orange-500/30 hover:bg-orange-500/10"
+              >
+                <Mail className="w-3.5 h-3.5 mr-1 text-orange-500" /> Send via Email
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const target = viewingQuotation;
+                  setViewingQuotation(null);
+                  handleEditClick(target);
+                }}
+                className="text-xs"
+              >
+                <Edit className="w-3.5 h-3.5 mr-1" /> Edit
+              </Button>
+            </div>
+            <Button variant="secondary" size="sm" onClick={() => setViewingQuotation(null)} className="text-xs">
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Send Quotation via Email Dialog */}
+      <Dialog open={!!emailQuotation} onOpenChange={() => setEmailQuotation(null)}>
+        <DialogContent className="sm:max-w-[550px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base">
+              <Mail className="w-5 h-5 text-orange-500" />
+              Send Quotation via Email
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              Email this official quotation directly with a compiled PDF attachment.
+            </DialogDescription>
+          </DialogHeader>
+          {emailQuotation && (
+            <form onSubmit={handleSendEmailSubmit} className="space-y-4 mt-2">
+              <div className="bg-muted/30 p-3 rounded-lg border text-xs space-y-1">
+                <div className="flex justify-between font-semibold text-foreground">
+                  <span>Quotation: {emailQuotation.quotationNo}</span>
+                  <span className="text-primary">{formatCurrency(emailQuotation.totalAmount)}</span>
+                </div>
+                <p className="text-muted-foreground">Project: {emailQuotation.projectName}</p>
+                <p className="text-muted-foreground">Lead: {emailQuotation.leadId?.leadName || "Valued Client"}</p>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs">Recipient Email *</Label>
+                <Input
+                  type="email"
+                  value={emailForm.email}
+                  onChange={(e) => setEmailForm({ ...emailForm, email: e.target.value })}
+                  placeholder="client@example.com"
+                  required
+                  className="h-8 text-xs"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs">Subject Line *</Label>
+                <Input
+                  value={emailForm.subject}
+                  onChange={(e) => setEmailForm({ ...emailForm, subject: e.target.value })}
+                  placeholder="Subject"
+                  required
+                  className="h-8 text-xs"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs">Cover Message</Label>
+                <Textarea
+                  value={emailForm.message}
+                  onChange={(e) => setEmailForm({ ...emailForm, message: e.target.value })}
+                  rows={4}
+                  className="text-xs"
+                />
+              </div>
+
+              <div className="flex items-center gap-2 p-2.5 bg-emerald-500/10 border border-emerald-500/20 rounded-md text-xs text-emerald-600 dark:text-emerald-400">
+                <FileDown className="w-4 h-4 shrink-0" />
+                <div className="truncate">
+                  <strong>Attached PDF:</strong> {emailQuotation.quotationNo}.pdf will be automatically compiled and attached.
+                </div>
+              </div>
+
+              <DialogFooter className="border-t pt-3">
+                <Button type="button" variant="outline" size="sm" onClick={() => setEmailQuotation(null)}>
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  size="sm"
+                  disabled={sendQuotationEmail.isPending}
+                  className="bg-orange-600 hover:bg-orange-700 text-white"
+                >
+                  {sendQuotationEmail.isPending ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> Sending Email...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-3.5 h-3.5 mr-1.5" /> Send Email
+                    </>
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Create Quotation Dialog */}
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>

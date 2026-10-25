@@ -132,7 +132,7 @@ const CreateEditAgreement = () => {
       state: "Bihar",
       country: "India",
       zipCode: "800026",
-      email: "hello.webflora@gmail.com",
+      email: "info@webfloratechnologies.com",
       phone: "+91 8863081255",
       alternatePhone: "+91 8540814729",
       gstNumber: "",

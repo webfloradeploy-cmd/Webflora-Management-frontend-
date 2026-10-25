@@ -100,6 +100,7 @@ export const API_ENDPOINTS = {
     QUOTATION_CREATE: '/api/quotation/create',
     QUOTATION_UPDATE: (id: string) => `/api/quotation/update/${id}`,
     QUOTATION_DELETE: (id: string) => `/api/quotation/delete/${id}`,
+    QUOTATION_SEND: (id: string) => `/api/quotation/send/${id}`,
 
     // Agreement
     AGREEMENT_BASE: '/api/agreement',

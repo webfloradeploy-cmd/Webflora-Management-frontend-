@@ -53,3 +53,18 @@ export const useDeleteQuotation = () => {
         },
     });
 };
+
+export const useSendQuotationEmail = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({ id, data }: { id: string; data: any }) => quotationApi.sendEmail(id, data),
+        onSuccess: (res: any) => {
+            queryClient.invalidateQueries({ queryKey: ["quotations"] });
+            toast.success(res?.message || "Quotation sent via email successfully");
+        },
+        onError: (error: any) => {
+            const message = error.response?.data?.message || "Failed to send quotation email";
+            toast.error(message);
+        },
+    });
+};

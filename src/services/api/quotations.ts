@@ -23,4 +23,11 @@ export const quotationApi = {
         const response = await axiosInstance.delete(API_ENDPOINTS.QUOTATION_DELETE(id));
         return response.data;
     },
+
+    sendEmail: async (id: string, data: { email?: string; subject?: string; message?: string; pdfBase64?: string }) => {
+        const response = await axiosInstance.post(API_ENDPOINTS.QUOTATION_SEND(id), data, {
+            timeout: 60000
+        });
+        return response.data;
+    },
 };
