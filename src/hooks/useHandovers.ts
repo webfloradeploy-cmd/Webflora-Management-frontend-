@@ -25,6 +25,7 @@ export const useCreateHandover = () => {
         mutationFn: (data: CreateHandoverRequest) => handoverApi.create(data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['handovers'] });
+            queryClient.invalidateQueries({ queryKey: ['projects'] });
             toast.success('Handover created successfully');
         },
         onError: (error: any) => {
@@ -42,6 +43,7 @@ export const useUpdateHandover = () => {
             handoverApi.update(id, data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['handovers'] });
+            queryClient.invalidateQueries({ queryKey: ['projects'] });
             toast.success('Handover updated successfully');
         },
         onError: (error: any) => {

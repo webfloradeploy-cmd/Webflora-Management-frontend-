@@ -10,6 +10,7 @@ interface StatusBadgeProps {
 }
 
 const statusConfig: Record<string, { label: string; className: string }> = {
+  new: { label: "New", className: "badge-info" },
   paid: { label: "Paid", className: "badge-success" },
   partial: { label: "Partial", className: "badge-warning" },
   pending: { label: "Due", className: "badge-warning" },

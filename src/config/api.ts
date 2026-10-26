@@ -93,6 +93,10 @@ export const API_ENDPOINTS = {
     LEAD_CREATE: '/api/lead/create',
     LEAD_UPDATE: (id: string) => `/api/lead/update/${id}`,
     LEAD_DELETE: (id: string) => `/api/lead/delete/${id}`,
+    LEAD_REQUEST_QUOTATION: (id: string) => `/api/lead/${id}/request-quotation`,
+    LEAD_APPROVE_QUOTATION: (id: string) => `/api/lead/${id}/approve-quotation`,
+    LEAD_REJECT_QUOTATION: (id: string) => `/api/lead/${id}/reject-quotation`,
+    LEAD_ADD_FOLLOW_UP: (id: string) => `/api/lead/${id}/follow-up`,
 
     // Quotation
     QUOTATION_BASE: '/api/quotation',
@@ -111,4 +115,8 @@ export const API_ENDPOINTS = {
     AGREEMENT_DUPLICATE: (id: string) => `/api/agreement/duplicate/${id}`,
     AGREEMENT_SEND: (id: string) => `/api/agreement/send/${id}`,
     AGREEMENT_ESIGN: (id: string) => `/api/agreement/esign/${id}`,
+
+    // Settings & Permissions
+    SETTINGS_BASE: '/api/settings',
+    SETTINGS_MY_PERMISSIONS: '/api/settings/my-permissions',
 } as const;

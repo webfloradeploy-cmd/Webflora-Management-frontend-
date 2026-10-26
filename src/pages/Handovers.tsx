@@ -1,6 +1,7 @@
 import { useState } from "react";
 import PageHeader from "@/components/PageHeader";
 import StatusBadge from "@/components/StatusBadge";
+import StatusSelect from "@/components/StatusSelect";
 import { Button } from "@/components/ui/button";
 import { Plus, Search, Edit, Trash2, Eye, Key, Github, Globe, UserCheck, GraduationCap, Server } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -88,14 +89,28 @@ const Handovers = () => {
     const deleteHandover = useDeleteHandover();
     const { toast } = useToast();
 
-    // Combine employees and interns into a single list
-    const allAssignees = [...employees, ...interns].sort((a, b) => a.name.localeCompare(b.name));
+    const [statusFilter, setStatusFilter] = useState("all");
 
-    const filteredHandovers = handovers.filter(
-        (h: any) =>
+    // Filter out completed projects for handover assignment (do not show completed projects)
+    const assignableProjects = projects
+        .filter((p: any) => p.status !== 'Completed' || (isEditDialogOpen && p.id === formData.projectId))
+        .sort((a: any, b: any) => a.name.localeCompare(b.name));
+
+    // Combine employees and interns into a single list (only active personnel can be assigned)
+    const allAssignees = [...employees, ...interns]
+        .filter((a: any) => a.status !== 'inactive')
+        .sort((a, b) => a.name.localeCompare(b.name));
+
+    const filteredHandovers = handovers.filter((h: any) => {
+        const matchesSearch =
             h.projectName?.toLowerCase().includes(search.toLowerCase()) ||
-            h.assigneeName?.toLowerCase().includes(search.toLowerCase())
-    );
+            h.assigneeName?.toLowerCase().includes(search.toLowerCase());
+        const matchesStatus =
+            statusFilter === "all" ? true :
+            statusFilter === "active" ? h.status !== "Completed" :
+            h.status === statusFilter;
+        return matchesSearch && matchesStatus;
+    });
 
     const handleCreateHandover = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -165,6 +180,14 @@ const Handovers = () => {
 
     const handleAssigneeChange = (value: string) => {
         const selected = allAssignees.find(a => a.id === value);
+        if (selected && selected.type === 'employee' && selected.status === 'inactive') {
+            toast({
+                title: "Employee Inactive",
+                description: "Cannot assign handovers or work to an inactive employee.",
+                variant: "destructive",
+            });
+            return;
+        }
         if (selected) {
             setFormData({
                 ...formData,
@@ -190,14 +213,31 @@ const Handovers = () => {
             />
 
             <div className="p-6 space-y-6">
-                <div className="relative max-w-md">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                        placeholder="Search handovers..."
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        className="pl-10"
-                    />
+                <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
+                    <div className="relative max-w-md w-full">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Input
+                            placeholder="Search handovers..."
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            className="pl-10"
+                        />
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Select value={statusFilter} onValueChange={setStatusFilter}>
+                            <SelectTrigger className="w-[160px] h-10">
+                                <SelectValue placeholder="Filter status" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All Statuses</SelectItem>
+                                <SelectItem value="active">Active Only</SelectItem>
+                                <SelectItem value="New">New</SelectItem>
+                                <SelectItem value="In Progress">In Progress</SelectItem>
+                                <SelectItem value="Completed">Completed</SelectItem>
+                                <SelectItem value="On Hold">On Hold</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
                 </div>
 
                 {isLoading ? (
@@ -236,7 +276,21 @@ const Handovers = () => {
                                         <TableCell>{formatDate(handover.handoverDate)}</TableCell>
                                         <TableCell>{formatDate(handover.deadline)}</TableCell>
                                         <TableCell>
-                                            <StatusBadge status={handover.status} />
+                                            {isAdmin ? (
+                                                <StatusSelect
+                                                    value={handover.status || "In Progress"}
+                                                    onChange={async (newStatus) => {
+                                                        try {
+                                                            await updateHandover.mutateAsync({
+                                                                id: handover.id,
+                                                                data: { status: newStatus }
+                                                            });
+                                                        } catch (error) {}
+                                                    }}
+                                                />
+                                            ) : (
+                                                <StatusBadge status={handover.status} />
+                                            )}
                                         </TableCell>
                                         {isAdmin ? (
                                             <TableCell className="text-right">
@@ -288,7 +342,19 @@ const Handovers = () => {
                                 <Label>Project *</Label>
                                 <Select value={formData.projectId} onValueChange={(v) => setFormData({ ...formData, projectId: v })} required>
                                     <SelectTrigger><SelectValue placeholder="Select Project" /></SelectTrigger>
-                                    <SelectContent>{projects.map((p: any) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
+                                    <SelectContent>
+                                        {assignableProjects.length === 0 ? (
+                                            <div className="p-3 text-xs text-muted-foreground text-center">
+                                                No active projects available
+                                            </div>
+                                        ) : (
+                                            assignableProjects.map((p: any) => (
+                                                <SelectItem key={p.id} value={p.id}>
+                                                    {p.name}
+                                                </SelectItem>
+                                            ))
+                                        )}
+                                    </SelectContent>
                                 </Select>
                             </div>
 
@@ -304,7 +370,7 @@ const Handovers = () => {
                                                         <UserCheck className="w-3.5 h-3.5 text-blue-500" /> :
                                                         <GraduationCap className="w-3.5 h-3.5 text-purple-500" />
                                                     }
-                                                    {a.name}
+                                                    <span>{a.name}</span>
                                                     <span className="text-[10px] text-muted-foreground uppercase opacity-70 ml-1">
                                                         ({a.type})
                                                     </span>
@@ -341,9 +407,11 @@ const Handovers = () => {
                                 <Select value={formData.status} onValueChange={(v) => setFormData({ ...formData, status: v })}>
                                     <SelectTrigger><SelectValue /></SelectTrigger>
                                     <SelectContent>
+                                        <SelectItem value="New">New</SelectItem>
                                         <SelectItem value="In Progress">In Progress</SelectItem>
-                                        <SelectItem value="Handed Over">Handed Over</SelectItem>
                                         <SelectItem value="Completed">Completed</SelectItem>
+                                        <SelectItem value="On Hold">On Hold</SelectItem>
+                                        <SelectItem value="Handed Over">Handed Over</SelectItem>
                                         <SelectItem value="Revoked">Revoked</SelectItem>
                                     </SelectContent>
                                 </Select>

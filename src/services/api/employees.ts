@@ -43,4 +43,10 @@ export const employeeApi = {
         const response = await axiosInstance.get<{ employees: any[] }>('/api/employee/list');
         return response.data.employees;
     },
+    toggleStatus: async (id: string) => {
+        const response = await axiosInstance.patch<{ message: string; status: string; employee: any }>(
+            `${API_ENDPOINTS.EMPLOYEE_BASE}/${id}/status`
+        );
+        return response.data;
+    },
 };

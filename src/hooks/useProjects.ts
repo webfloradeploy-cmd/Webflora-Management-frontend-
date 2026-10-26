@@ -25,6 +25,7 @@ export const useCreateProject = () => {
         mutationFn: (data: CreateProjectRequest) => projectApi.create(data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['projects'] });
+            queryClient.invalidateQueries({ queryKey: ['handovers'] });
             toast.success('Project created successfully');
         },
         onError: (error: any) => {
@@ -42,6 +43,7 @@ export const useUpdateProject = () => {
             projectApi.update(id, data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['projects'] });
+            queryClient.invalidateQueries({ queryKey: ['handovers'] });
             toast.success('Project updated successfully');
         },
         onError: (error: any) => {

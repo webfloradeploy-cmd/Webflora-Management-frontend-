@@ -66,3 +66,21 @@ export const useDeleteIntern = () => {
         },
     });
 };
+
+export const useToggleInternStatus = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: (id: string) => internApi.toggleStatus(id),
+        onSuccess: (data: any) => {
+            queryClient.invalidateQueries({ queryKey: ['interns'] });
+            queryClient.invalidateQueries({ queryKey: ['handovers'] });
+            queryClient.invalidateQueries({ queryKey: ['projects'] });
+            toast.success(data?.message || 'Intern status updated');
+        },
+        onError: (error: any) => {
+            const message = error.response?.data?.message || 'Failed to update intern status';
+            toast.error(message);
+        },
+    });
+};

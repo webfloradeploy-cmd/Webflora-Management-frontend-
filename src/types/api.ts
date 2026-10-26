@@ -45,6 +45,28 @@ export interface EmployeeBackend {
     phone: string;
     address: string;
     salary: number;
+    employeeId?: string;
+    status?: 'active' | 'inactive';
+    jobRole?: string;
+    department?: string;
+    joiningDate?: string;
+    fatherName?: string;
+    motherName?: string;
+    dob?: string;
+    gender?: string;
+    bloodGroup?: string;
+    emergencyPhone?: string;
+    aadhaarNumber?: string;
+    panNumber?: string;
+    bio?: string;
+    qualification?: string;
+    stream?: string;
+    institution?: string;
+    passingYear?: string;
+    gradePercentage?: string;
+    bankName?: string;
+    accountNumber?: string;
+    ifscCode?: string;
     totalPaid?: number;
     createdAt: string;
     updatedAt: string;
@@ -55,6 +77,9 @@ export interface EmployeeResponse {
     name: string;
     email: string;
     role: string;
+    status?: 'active' | 'inactive';
+    jobRole?: string;
+    department?: string;
 }
 
 export interface CreateEmployeeRequest {
@@ -65,6 +90,27 @@ export interface CreateEmployeeRequest {
     phone: string;
     address: string;
     salary: number;
+    status?: 'active' | 'inactive';
+    jobRole?: string;
+    department?: string;
+    joiningDate?: string;
+    fatherName?: string;
+    motherName?: string;
+    dob?: string;
+    gender?: string;
+    bloodGroup?: string;
+    emergencyPhone?: string;
+    aadhaarNumber?: string;
+    panNumber?: string;
+    bio?: string;
+    qualification?: string;
+    stream?: string;
+    institution?: string;
+    passingYear?: string;
+    gradePercentage?: string;
+    bankName?: string;
+    accountNumber?: string;
+    ifscCode?: string;
 }
 
 export interface UpdateEmployeeRequest {
@@ -75,6 +121,27 @@ export interface UpdateEmployeeRequest {
     phone?: string;
     address?: string;
     salary?: number;
+    status?: 'active' | 'inactive';
+    jobRole?: string;
+    department?: string;
+    joiningDate?: string;
+    fatherName?: string;
+    motherName?: string;
+    dob?: string;
+    gender?: string;
+    bloodGroup?: string;
+    emergencyPhone?: string;
+    aadhaarNumber?: string;
+    panNumber?: string;
+    bio?: string;
+    qualification?: string;
+    stream?: string;
+    institution?: string;
+    passingYear?: string;
+    gradePercentage?: string;
+    bankName?: string;
+    accountNumber?: string;
+    ifscCode?: string;
 }
 
 // Intern Types (Backend)
@@ -89,6 +156,28 @@ export interface InternBackend {
     salary: number;
     totalPaid?: number;
     duration: string;
+    employeeId?: string;
+    status?: 'active' | 'inactive';
+    jobRole?: string;
+    department?: string;
+    joiningDate?: string;
+    fatherName?: string;
+    motherName?: string;
+    dob?: string;
+    gender?: string;
+    bloodGroup?: string;
+    emergencyPhone?: string;
+    aadhaarNumber?: string;
+    panNumber?: string;
+    bio?: string;
+    qualification?: string;
+    stream?: string;
+    institution?: string;
+    passingYear?: string;
+    gradePercentage?: string;
+    bankName?: string;
+    accountNumber?: string;
+    ifscCode?: string;
     createdAt: string;
     updatedAt: string;
 }
@@ -98,6 +187,9 @@ export interface InternResponse {
     name: string;
     email: string;
     role: string;
+    status?: 'active' | 'inactive';
+    jobRole?: string;
+    department?: string;
 }
 
 export interface CreateInternRequest {
@@ -108,6 +200,27 @@ export interface CreateInternRequest {
     address: string;
     duration: string;
     salary: number;
+    status?: 'active' | 'inactive';
+    jobRole?: string;
+    department?: string;
+    joiningDate?: string;
+    fatherName?: string;
+    motherName?: string;
+    dob?: string;
+    gender?: string;
+    bloodGroup?: string;
+    emergencyPhone?: string;
+    aadhaarNumber?: string;
+    panNumber?: string;
+    bio?: string;
+    qualification?: string;
+    stream?: string;
+    institution?: string;
+    passingYear?: string;
+    gradePercentage?: string;
+    bankName?: string;
+    accountNumber?: string;
+    ifscCode?: string;
 }
 
 export interface UpdateInternRequest extends Partial<CreateInternRequest> { }
@@ -359,14 +472,33 @@ export const adaptExpenseData = (expense: ExpenseBackend): any => {
 export const adaptEmployeeData = (employee: EmployeeBackend): any => {
     return {
         id: employee._id,
+        employeeId: employee.employeeId || '',
         name: employee.name,
         email: employee.email,
         role: employee.role,
-        department: 'General', // Default value since backend doesn't have this
+        jobRole: employee.jobRole || '',
+        department: employee.department || '',
         salary: employee.salary,
-        joinDate: employee.createdAt,
-        status: 'active' as const,
+        joinDate: employee.joiningDate || employee.createdAt,
+        status: (employee as any).status || 'active',
         avatar: employee.name.split(' ').map(n => n[0]).join('').toUpperCase(),
+        fatherName: employee.fatherName || '',
+        motherName: employee.motherName || '',
+        dob: employee.dob,
+        gender: employee.gender || '',
+        bloodGroup: employee.bloodGroup || '',
+        emergencyPhone: employee.emergencyPhone || '',
+        aadhaarNumber: employee.aadhaarNumber || '',
+        panNumber: employee.panNumber || '',
+        bio: employee.bio || '',
+        qualification: employee.qualification || '',
+        stream: employee.stream || '',
+        institution: employee.institution || '',
+        passingYear: employee.passingYear || '',
+        gradePercentage: employee.gradePercentage || '',
+        bankName: employee.bankName || '',
+        accountNumber: employee.accountNumber || '',
+        ifscCode: employee.ifscCode || '',
         projectsCompleted: 0, // Default value
         tasksCompleted: 0, // Default value
         attendance: 95, // Default value
@@ -490,14 +622,37 @@ export const adaptProjectData = (project: ProjectBackend): any => {
 export const adaptInternData = (intern: InternBackend): any => {
     return {
         id: intern._id,
+        employeeId: intern.employeeId || '',
         name: intern.name,
         email: intern.email,
         phone: intern.phone,
         address: intern.address,
-        role: intern.role,
+        role: intern.role || 'intern',
+        jobRole: intern.jobRole || '',
+        department: intern.department || '',
         salary: intern.salary,
         totalPaid: intern.totalPaid || 0,
-        duration: intern.duration,
+        duration: intern.duration || '',
+        status: (intern as any).status || 'active',
+        joinDate: intern.joiningDate || intern.createdAt,
+        avatar: intern.name.split(' ').map(n => n[0]).join('').toUpperCase(),
+        fatherName: intern.fatherName || '',
+        motherName: intern.motherName || '',
+        dob: intern.dob,
+        gender: intern.gender || '',
+        bloodGroup: intern.bloodGroup || '',
+        emergencyPhone: intern.emergencyPhone || '',
+        aadhaarNumber: intern.aadhaarNumber || '',
+        panNumber: intern.panNumber || '',
+        bio: intern.bio || '',
+        qualification: intern.qualification || '',
+        stream: intern.stream || '',
+        institution: intern.institution || '',
+        passingYear: intern.passingYear || '',
+        gradePercentage: intern.gradePercentage || '',
+        bankName: intern.bankName || '',
+        accountNumber: intern.accountNumber || '',
+        ifscCode: intern.ifscCode || '',
         createdAt: intern.createdAt,
         updatedAt: intern.updatedAt,
         type: 'intern' as const,
@@ -519,6 +674,6 @@ export const adaptHandoverData = (handover: HandoverBackend): any => {
         deadline: handover.deadline,
         credentials: handover.credentials || {},
         instructions: handover.instructions || '',
-        status: handover.status || 'In Progress',
+        status: project?.status || handover.status || 'In Progress',
     };
 };

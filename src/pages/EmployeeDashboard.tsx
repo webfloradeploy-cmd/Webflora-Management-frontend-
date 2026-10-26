@@ -20,6 +20,8 @@ import { useAttendance, useMarkAttendance } from "@/hooks/useAttendance";
 import { handoverApi } from "@/services/api/handover";
 import { useQuery } from "@tanstack/react-query";
 import ActivityLogSection from "@/components/ActivityLogSection";
+import { useMyPermissions } from "@/hooks/useSettings";
+import { FolderKanban, FileText, Users, CreditCard } from "lucide-react";
 
 const EmployeeDashboard = () => {
     const { user } = useAuth();
@@ -34,6 +36,9 @@ const EmployeeDashboard = () => {
         queryKey: ['handovers', 'my'],
         queryFn: () => handoverApi.getAll(),
     });
+
+    const { data: permData } = useMyPermissions();
+    const permissions = permData?.permissions;
 
     const activeHandoversCount = handovers.filter((h: any) => h.status === 'pending').length;
 
@@ -136,6 +141,76 @@ const EmployeeDashboard = () => {
                         iconColor={isMarkedToday ? "bg-success/10 border border-success/20 text-success" : "bg-destructive/10 border border-destructive/20 text-destructive"}
                     />
                 </div>
+
+                {/* Workspace Modules Enabled by Admin */}
+                {((permissions?.projects) || (permissions?.clients) || (permissions?.leads) || (permissions?.invoices) || (permissions?.quotations) || (permissions?.agreements) || (permissions?.expenses)) && (
+                    <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                            <h3 className="text-base font-bold text-foreground flex items-center gap-2">
+                                <FolderKanban className="w-4 h-4 text-primary" /> Workspace Access
+                            </h3>
+                            <span className="text-xs text-muted-foreground">Enabled by Administrator</span>
+                        </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3">
+                            {permissions?.projects && (
+                                <button onClick={() => navigate("/projects")} className="p-4 rounded-2xl bg-card border border-border/60 hover:border-primary/50 hover:bg-primary/5 transition-all flex flex-col items-center text-center gap-2 group">
+                                    <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                        <FolderKanban className="w-5 h-5" />
+                                    </div>
+                                    <span className="text-xs font-bold text-foreground">Projects</span>
+                                </button>
+                            )}
+                            {permissions?.invoices && (
+                                <button onClick={() => navigate("/invoices")} className="p-4 rounded-2xl bg-card border border-border/60 hover:border-primary/50 hover:bg-primary/5 transition-all flex flex-col items-center text-center gap-2 group">
+                                    <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                        <FileText className="w-5 h-5" />
+                                    </div>
+                                    <span className="text-xs font-bold text-foreground">Invoices</span>
+                                </button>
+                            )}
+                            {permissions?.clients && (
+                                <button onClick={() => navigate("/clients")} className="p-4 rounded-2xl bg-card border border-border/60 hover:border-primary/50 hover:bg-primary/5 transition-all flex flex-col items-center text-center gap-2 group">
+                                    <div className="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                        <Users className="w-5 h-5" />
+                                    </div>
+                                    <span className="text-xs font-bold text-foreground">Clients</span>
+                                </button>
+                            )}
+                            {permissions?.leads && (
+                                <button onClick={() => navigate("/leads")} className="p-4 rounded-2xl bg-card border border-border/60 hover:border-primary/50 hover:bg-primary/5 transition-all flex flex-col items-center text-center gap-2 group">
+                                    <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                        <Users className="w-5 h-5" />
+                                    </div>
+                                    <span className="text-xs font-bold text-foreground">Leads</span>
+                                </button>
+                            )}
+                            {permissions?.quotations && (
+                                <button onClick={() => navigate("/quotations")} className="p-4 rounded-2xl bg-card border border-border/60 hover:border-primary/50 hover:bg-primary/5 transition-all flex flex-col items-center text-center gap-2 group">
+                                    <div className="w-10 h-10 rounded-xl bg-rose-500/10 text-rose-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                        <FileText className="w-5 h-5" />
+                                    </div>
+                                    <span className="text-xs font-bold text-foreground">Quotations</span>
+                                </button>
+                            )}
+                            {permissions?.agreements && (
+                                <button onClick={() => navigate("/agreements")} className="p-4 rounded-2xl bg-card border border-border/60 hover:border-primary/50 hover:bg-primary/5 transition-all flex flex-col items-center text-center gap-2 group">
+                                    <div className="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                        <FileText className="w-5 h-5" />
+                                    </div>
+                                    <span className="text-xs font-bold text-foreground">Agreements</span>
+                                </button>
+                            )}
+                            {permissions?.expenses && (
+                                <button onClick={() => navigate("/expenses")} className="p-4 rounded-2xl bg-card border border-border/60 hover:border-primary/50 hover:bg-primary/5 transition-all flex flex-col items-center text-center gap-2 group">
+                                    <div className="w-10 h-10 rounded-xl bg-cyan-500/10 text-cyan-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                        <CreditCard className="w-5 h-5" />
+                                    </div>
+                                    <span className="text-xs font-bold text-foreground">Expenses</span>
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                )}
 
                 {/* Dashboard grid */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

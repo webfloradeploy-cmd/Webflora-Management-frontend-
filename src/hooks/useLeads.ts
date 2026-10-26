@@ -53,3 +53,63 @@ export const useDeleteLead = () => {
         },
     });
 };
+
+export const useRequestQuotation = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({ id, notes }: { id: string; notes?: string }) => leadApi.requestQuotation(id, notes),
+        onSuccess: (res) => {
+            queryClient.invalidateQueries({ queryKey: ["leads"] });
+            toast.success(res?.message || "Quotation request submitted to Admin");
+        },
+        onError: (error: any) => {
+            const message = error.response?.data?.message || "Failed to request quotation";
+            toast.error(message);
+        },
+    });
+};
+
+export const useApproveQuotation = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (id: string) => leadApi.approveQuotation(id),
+        onSuccess: (res) => {
+            queryClient.invalidateQueries({ queryKey: ["leads"] });
+            toast.success(res?.message || "Quotation request approved! Quotation can now be created.");
+        },
+        onError: (error: any) => {
+            const message = error.response?.data?.message || "Failed to approve quotation request";
+            toast.error(message);
+        },
+    });
+};
+
+export const useRejectQuotation = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({ id, reason }: { id: string; reason?: string }) => leadApi.rejectQuotation(id, reason),
+        onSuccess: (res) => {
+            queryClient.invalidateQueries({ queryKey: ["leads"] });
+            toast.success(res?.message || "Quotation request rejected");
+        },
+        onError: (error: any) => {
+            const message = error.response?.data?.message || "Failed to reject quotation request";
+            toast.error(message);
+        },
+    });
+};
+
+export const useAddFollowUp = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({ id, data }: { id: string; data: any }) => leadApi.addFollowUp(id, data),
+        onSuccess: (res) => {
+            queryClient.invalidateQueries({ queryKey: ["leads"] });
+            toast.success(res?.message || "Follow-up recorded successfully");
+        },
+        onError: (error: any) => {
+            const message = error.response?.data?.message || "Failed to record follow-up";
+            toast.error(message);
+        },
+    });
+};

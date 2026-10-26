@@ -2,12 +2,15 @@ import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import PageHeader from "@/components/PageHeader";
 import StatusBadge from "@/components/StatusBadge";
+import StatusSelect from "@/components/StatusSelect";
 import { Button } from "@/components/ui/button";
 import { Plus, Search, Calendar, Users as UsersIcon, Trash2, Eye, Building2, History, Edit } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { useProjects, useCreateProject, useDeleteProject, useUpdateProject } from "@/hooks/useProjects";
 import { useClients } from "@/hooks/useClients";
+import { useEmployees } from "@/hooks/useEmployees";
+import { useToast } from "@/hooks/use-toast";
 import {
   Dialog,
   DialogContent,
@@ -68,22 +71,43 @@ const Projects = () => {
     totalAmount: "",
     startDate: "",
     endDate: "",
+    assignedTeam: [] as string[],
   });
 
   const { data: projects = [], isLoading } = useProjects();
   const { data: clients = [] } = useClients();
+  const { data: employees = [] } = useEmployees();
+  const { toast } = useToast();
   const createProject = useCreateProject();
   const updateProject = useUpdateProject();
   const deleteProject = useDeleteProject();
 
-  const filteredProjects = projects.filter(
-    (p: any) =>
+  const [statusFilter, setStatusFilter] = useState("all");
+
+  const filteredProjects = projects.filter((p: any) => {
+    const matchesSearch =
       p.name.toLowerCase().includes(search.toLowerCase()) ||
-      p.client.toLowerCase().includes(search.toLowerCase())
-  );
+      p.client.toLowerCase().includes(search.toLowerCase());
+    const matchesStatus =
+      statusFilter === "all" ? true :
+      statusFilter === "active" ? p.status !== "Completed" :
+      p.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (formData.assignedTeam && formData.assignedTeam.length > 0) {
+      const hasInactive = employees.some((emp: any) => formData.assignedTeam.includes(emp.id) && emp.status === 'inactive');
+      if (hasInactive) {
+        toast({
+          title: "Inactive Employee",
+          description: "Cannot assign project to an inactive employee.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
     try {
       await createProject.mutateAsync({
         ...formData,
@@ -99,6 +123,17 @@ const Projects = () => {
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedProject) return;
+    if (formData.assignedTeam && formData.assignedTeam.length > 0) {
+      const hasInactive = employees.some((emp: any) => formData.assignedTeam.includes(emp.id) && emp.status === 'inactive');
+      if (hasInactive) {
+        toast({
+          title: "Inactive Employee",
+          description: "Cannot assign project to an inactive employee.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
     try {
       await updateProject.mutateAsync({
         id: selectedProject.id,
@@ -124,6 +159,7 @@ const Projects = () => {
       totalAmount: "",
       startDate: "",
       endDate: "",
+      assignedTeam: [],
     });
   };
 
@@ -155,15 +191,32 @@ const Projects = () => {
       />
 
       <div className="p-6 space-y-4">
-        {/* Search */}
-        <div className="relative max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Search projects..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 h-9 bg-card border-border"
-          />
+        {/* Search & Filter */}
+        <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
+          <div className="relative max-w-sm w-full">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Search projects..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9 h-9 bg-card border-border"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[160px] h-9 bg-card border-border text-xs">
+                <SelectValue placeholder="Filter status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="active">Active Only</SelectItem>
+                <SelectItem value="New">New</SelectItem>
+                <SelectItem value="In Progress">In Progress</SelectItem>
+                <SelectItem value="Completed">Completed</SelectItem>
+                <SelectItem value="On Hold">On Hold</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         {/* Projects Table */}
@@ -219,9 +272,17 @@ const Projects = () => {
                         </div>
                       </TableCell>
                       <TableCell className="py-3.5">
-                        <Badge variant="outline" className={`${getStatusColor(project.status)} font-medium text-[10px] px-2 py-0.5`}>
-                          {project.status}
-                        </Badge>
+                        <StatusSelect
+                          value={project.status || "New"}
+                          onChange={async (newStatus) => {
+                            try {
+                              await updateProject.mutateAsync({
+                                id: project.id,
+                                data: { status: newStatus }
+                              });
+                            } catch (err) {}
+                          }}
+                        />
                       </TableCell>
                       <TableCell className="py-3.5">
                         <div className="space-y-1.5">
@@ -248,6 +309,9 @@ const Projects = () => {
                                 totalAmount: project.budget.toString(),
                                 startDate: project.startDate?.split('T')[0] || "",
                                 endDate: project.deadline?.split('T')[0] || "",
+                                assignedTeam: Array.isArray(project.assignedTeam)
+                                  ? project.assignedTeam.map((m: any) => typeof m === 'object' ? (m._id || m.id) : m)
+                                  : [],
                               });
                               setIsEditDialogOpen(true);
                             }} title="Edit Project">
@@ -349,6 +413,28 @@ const Projects = () => {
               </div>
 
               <div className="space-y-2">
+                <Label htmlFor="assignedTeam">Assigned Employee (Optional)</Label>
+                <Select
+                  value={formData.assignedTeam?.[0] || "none"}
+                  onValueChange={(val) => setFormData({ ...formData, assignedTeam: val === "none" ? [] : [val] })}
+                >
+                  <SelectTrigger id="assignedTeam">
+                    <SelectValue placeholder="Select team member" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None / Unassigned</SelectItem>
+                    {employees
+                      .filter((emp: any) => emp.status !== 'inactive')
+                      .map((emp: any) => (
+                        <SelectItem key={emp.id} value={emp.id}>
+                          {emp.name} ({emp.role})
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="description">Description</Label>
                 <Textarea
                   id="description"
@@ -446,6 +532,28 @@ const Projects = () => {
                   placeholder="Select deadline"
                 />
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-assignedTeam">Assigned Employee (Optional)</Label>
+              <Select
+                value={formData.assignedTeam?.[0] || "none"}
+                onValueChange={(val) => setFormData({ ...formData, assignedTeam: val === "none" ? [] : [val] })}
+              >
+                <SelectTrigger id="edit-assignedTeam">
+                  <SelectValue placeholder="Select team member" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None / Unassigned</SelectItem>
+                  {employees
+                    .filter((emp: any) => emp.status !== 'inactive')
+                    .map((emp: any) => (
+                      <SelectItem key={emp.id} value={emp.id}>
+                        {emp.name} ({emp.role})
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">

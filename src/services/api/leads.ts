@@ -23,4 +23,24 @@ export const leadApi = {
         const response = await axiosInstance.delete(API_ENDPOINTS.LEAD_DELETE(id));
         return response.data;
     },
+
+    requestQuotation: async (id: string, notes?: string) => {
+        const response = await axiosInstance.put(API_ENDPOINTS.LEAD_REQUEST_QUOTATION(id), { notes });
+        return response.data;
+    },
+
+    approveQuotation: async (id: string) => {
+        const response = await axiosInstance.put(API_ENDPOINTS.LEAD_APPROVE_QUOTATION(id));
+        return response.data;
+    },
+
+    rejectQuotation: async (id: string, reason?: string) => {
+        const response = await axiosInstance.put(API_ENDPOINTS.LEAD_REJECT_QUOTATION(id), { reason });
+        return response.data;
+    },
+
+    addFollowUp: async (id: string, data: { notes: string; interestStatus?: string; nextFollowUpDate?: string; conductedByName?: string; conductedById?: string }) => {
+        const response = await axiosInstance.post(API_ENDPOINTS.LEAD_ADD_FOLLOW_UP(id), data);
+        return response.data;
+    },
 };

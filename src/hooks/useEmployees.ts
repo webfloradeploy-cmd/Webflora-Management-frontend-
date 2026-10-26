@@ -59,3 +59,19 @@ export const useDeleteEmployee = () => {
         },
     });
 };
+
+export const useToggleEmployeeStatus = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: (id: string) => employeeApi.toggleStatus(id),
+        onSuccess: (data) => {
+            queryClient.invalidateQueries({ queryKey: ['employees'] });
+            toast.success(data.message || 'Status updated');
+        },
+        onError: (error: any) => {
+            const message = error.response?.data?.message || 'Failed to update employee status';
+            toast.error(message);
+        },
+    });
+};

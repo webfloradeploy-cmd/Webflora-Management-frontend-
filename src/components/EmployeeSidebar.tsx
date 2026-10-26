@@ -27,36 +27,82 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 
-const navigation = [
-  {
-    title: "Core",
-    items: [
-      { to: "/", icon: LayoutDashboard, label: "Dashboard" },
-      { to: "/#activity", icon: History, label: "Work Logs" },
-      { to: "/handovers", icon: Briefcase, label: "Handovers" },
-      { to: "/expenses", icon: CreditCard, label: "Expenses" },
-    ]
-  },
-  {
-    title: "Personnel",
-    items: [
-      { to: "/salaries", icon: Banknote, label: "My Salaries" },
-    ]
-  },
-  {
-    title: "Communication",
-    items: [
-      { to: "/notices", icon: Bell, label: "Notices" },
-      { to: "/communications", icon: MessageSquareWarning, label: "Communications" },
-    ]
+import { motion, AnimatePresence } from "framer-motion";
+import { useMyPermissions } from "@/hooks/useSettings";
+
+const getEmployeeNavigation = (permissions?: any) => {
+  const p = permissions || {};
+
+  const coreItems: any[] = [
+    { to: "/", icon: LayoutDashboard, label: "Dashboard" },
+  ];
+
+  if (p.projects) {
+    coreItems.push({ to: "/projects", icon: FolderKanban, label: "Projects" });
   }
-];
+  if (p.invoices) {
+    coreItems.push({ to: "/invoices", icon: FileText, label: "Invoices" });
+  }
+  if (p.clients) {
+    coreItems.push({ to: "/clients", icon: Users, label: "Clients" });
+  }
+  if (p.leads) {
+    coreItems.push({ to: "/leads", icon: Users, label: "Leads" });
+  }
+  if (p.quotations) {
+    coreItems.push({ to: "/quotations", icon: FileText, label: "Quotations" });
+  }
+  if (p.agreements) {
+    coreItems.push({ to: "/agreements", icon: FileText, label: "Agreements" });
+  }
+  if (p.expenses !== false) {
+    coreItems.push({ to: "/expenses", icon: CreditCard, label: "Expenses" });
+  }
+  if (p.handovers !== false) {
+    coreItems.push({ to: "/handovers", icon: Briefcase, label: "Handovers" });
+  }
+  if (p.activity !== false) {
+    coreItems.push({ to: "/#activity", icon: History, label: "Work Logs" });
+  }
+
+  const personnelItems: any[] = [];
+  if (p.salaries !== false) {
+    personnelItems.push({ to: "/salaries", icon: Banknote, label: "My Salaries" });
+  }
+
+  const communicationItems: any[] = [];
+  if (p.notices !== false) {
+    communicationItems.push({ to: "/notices", icon: Bell, label: "Notices" });
+  }
+  if (p.communications !== false) {
+    communicationItems.push({ to: "/communications", icon: MessageSquareWarning, label: "Communications" });
+  }
+
+  const insightsItems: any[] = [];
+  if (p.reports) {
+    insightsItems.push({ to: "/reports", icon: BarChart3, label: "Reports" });
+  }
+  insightsItems.push({ to: "/settings", icon: Settings, label: "Settings" });
+
+  const nav = [
+    { title: "Core", items: coreItems },
+  ];
+  if (personnelItems.length > 0) {
+    nav.push({ title: "Personnel", items: personnelItems });
+  }
+  if (communicationItems.length > 0) {
+    nav.push({ title: "Communication", items: communicationItems });
+  }
+  if (insightsItems.length > 0) {
+    nav.push({ title: "Insights", items: insightsItems });
+  }
+
+  return nav;
+};
 
 interface AppSidebarProps {
   children: React.ReactNode;
 }
-
-import { motion, AnimatePresence } from "framer-motion";
 
 const SidebarContent = ({
   collapsed,
@@ -65,7 +111,8 @@ const SidebarContent = ({
   handleLogout,
   location,
   isMobile,
-  onClose
+  onClose,
+  navigation
 }: {
   collapsed: boolean;
   setCollapsed?: (v: boolean) => void;
@@ -74,6 +121,7 @@ const SidebarContent = ({
   location: any;
   isMobile: boolean;
   onClose?: () => void;
+  navigation: any[];
 }) => (
   <div className="flex flex-col h-full bg-sidebar border-r border-white/5 relative overflow-hidden">
     {/* Animated background glow */}
@@ -210,6 +258,8 @@ const EmployeeSidebar = ({ children }: AppSidebarProps) => {
   const navigate = useNavigate();
   const { logout, user } = useAuth();
   const isMobile = useIsMobile();
+  const { data: permData } = useMyPermissions();
+  const navigation = getEmployeeNavigation(permData?.permissions);
 
   const handleLogout = () => {
     logout();
@@ -244,6 +294,7 @@ const EmployeeSidebar = ({ children }: AppSidebarProps) => {
                 location={location}
                 isMobile={true}
                 onClose={() => setOpen(false)}
+                navigation={navigation}
               />
             </SheetContent>
           </Sheet>
@@ -271,6 +322,7 @@ const EmployeeSidebar = ({ children }: AppSidebarProps) => {
           handleLogout={handleLogout}
           location={location}
           isMobile={false}
+          navigation={navigation}
         />
       </aside>
 
