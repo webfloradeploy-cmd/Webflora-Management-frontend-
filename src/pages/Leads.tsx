@@ -497,9 +497,13 @@ const Leads = () => {
                           <div className="space-y-1">
                             <div className="flex items-center gap-2 text-xs">
                               <Mail className="w-3.5 h-3.5 text-muted-foreground" />
-                              <a href={`mailto:${lead.email}`} className="hover:underline text-foreground">
-                                {lead.email}
-                              </a>
+                              {lead.email ? (
+                                <a href={`mailto:${lead.email}`} className="hover:underline text-foreground">
+                                  {lead.email}
+                                </a>
+                              ) : (
+                                <span className="text-muted-foreground/60 italic">No email</span>
+                              )}
                             </div>
                             <div className="flex items-center gap-2 text-xs">
                               <Phone className="w-3.5 h-3.5 text-muted-foreground" />
@@ -721,7 +725,7 @@ const Leads = () => {
                   <span className="font-semibold text-foreground">{activeFollowUpLead.contactNumber}</span>
                   <span className="mx-2">•</span>
                   <span className="text-muted-foreground">Email:</span>{" "}
-                  <span className="font-semibold text-foreground">{activeFollowUpLead.email}</span>
+                  <span className="font-semibold text-foreground">{activeFollowUpLead.email || "No email"}</span>
                 </div>
                 <div>{getInterestBadge(activeFollowUpLead.interestStatus || "Pending")}</div>
               </div>
@@ -952,14 +956,13 @@ const Leads = () => {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="email">Email *</Label>
+                <Label htmlFor="email">Email (Optional)</Label>
                 <Input
                   id="email"
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  placeholder="lead@example.com"
-                  required
+                  placeholder="lead@example.com (optional)"
                 />
               </div>
               <div className="space-y-2">
@@ -1085,13 +1088,13 @@ const Leads = () => {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="edit-email">Email *</Label>
+                <Label htmlFor="edit-email">Email (Optional)</Label>
                 <Input
                   id="edit-email"
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  required
+                  placeholder="lead@example.com (optional)"
                 />
               </div>
               <div className="space-y-2">
@@ -1198,7 +1201,7 @@ const Leads = () => {
                 <span className="font-bold text-foreground">{quotationRequestLead?.leadName}</span>
               </p>
               <p>
-                <span className="text-muted-foreground">Email:</span> {quotationRequestLead?.email}
+                <span className="text-muted-foreground">Email:</span> {quotationRequestLead?.email || "N/A"}
               </p>
               <p>
                 <span className="text-muted-foreground">Contact:</span> {quotationRequestLead?.contactNumber}
