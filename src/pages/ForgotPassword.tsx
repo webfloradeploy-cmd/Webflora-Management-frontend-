@@ -30,8 +30,9 @@ const ForgotPassword = () => {
                 { timeout: 45000 } // Allow up to 45s for email delivery
             );
             toast.success(response.data.message || 'OTP sent to your email');
+            const targetRole = response.data.role || role;
             // Navigate to OTP verification page and pass email/role in state
-            navigate('/verify-otp', { state: { email: cleanEmail, role } });
+            navigate('/verify-otp', { state: { email: cleanEmail, role: targetRole } });
         } catch (error: any) {
             let errorMessage = 'Failed to send OTP';
             if (error.response?.data?.message) {
