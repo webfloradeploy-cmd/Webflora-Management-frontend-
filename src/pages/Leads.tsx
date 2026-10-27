@@ -134,6 +134,7 @@ const Leads = () => {
 
   const filteredLeads = leads.filter((l: any) => {
     const matchesSearch =
+      (l.leadId && l.leadId.toLowerCase().includes(search.toLowerCase())) ||
       l.leadName?.toLowerCase().includes(search.toLowerCase()) ||
       (l.email && l.email.toLowerCase().includes(search.toLowerCase())) ||
       (l.contactNumber && l.contactNumber.includes(search)) ||
@@ -483,8 +484,15 @@ const Leads = () => {
                     return (
                       <TableRow key={lead._id} className="group hover:bg-muted/30 transition-colors">
                         <TableCell className="font-medium py-3.5 tracking-tight">
-                          <div className="space-y-0.5">
-                            <span className="font-bold text-foreground text-sm">{lead.leadName}</span>
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              {lead.leadId && (
+                                <span className="font-mono text-[11px] font-bold px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 whitespace-nowrap">
+                                  {lead.leadId}
+                                </span>
+                              )}
+                              <span className="font-bold text-foreground text-sm">{lead.leadName}</span>
+                            </div>
                             {lead.source && (
                               <p className="text-[11px] text-muted-foreground flex items-center gap-1">
                                 <span className="opacity-70">Source:</span> {lead.source}

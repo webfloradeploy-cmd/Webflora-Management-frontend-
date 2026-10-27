@@ -75,7 +75,10 @@ const Clients = () => {
   const filteredClients = clients.filter(
     (c: any) =>
       c.name.toLowerCase().includes(search.toLowerCase()) ||
-      (c.email && c.email.toLowerCase().includes(search.toLowerCase()))
+      (c.clientId && c.clientId.toLowerCase().includes(search.toLowerCase())) ||
+      (c.referenceNo && c.referenceNo.toLowerCase().includes(search.toLowerCase())) ||
+      (c.email && c.email.toLowerCase().includes(search.toLowerCase())) ||
+      (c.phone && c.phone.includes(search))
   );
 
   const handleCreateClient = async (e: React.FormEvent) => {
@@ -184,7 +187,7 @@ const Clients = () => {
         <div className="relative max-w-md">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
-            placeholder="Search clients..."
+            placeholder="Search clients by name, customer ID, email, or phone..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-10"
@@ -213,6 +216,7 @@ const Clients = () => {
               <Table>
                 <TableHeader className="bg-muted/50">
                   <TableRow>
+                    <TableHead className="font-bold py-4">Customer ID</TableHead>
                     <TableHead className="font-bold py-4">Client Name</TableHead>
                     <TableHead className="font-bold py-4">Email</TableHead>
                     <TableHead className="font-bold py-4">Contact Number</TableHead>
@@ -224,6 +228,11 @@ const Clients = () => {
                 <TableBody>
                   {filteredClients.map((client: any) => (
                     <TableRow key={client.id} className="group hover:bg-muted/30 transition-colors">
+                      <TableCell className="py-3.5">
+                        <span className="font-mono text-xs font-bold px-2.5 py-1 rounded-md bg-primary/10 text-primary border border-primary/20 whitespace-nowrap">
+                          {client.clientId || client.referenceNo || "—"}
+                        </span>
+                      </TableCell>
                       <TableCell className="font-medium py-3.5 tracking-tight">
                         {client.name}
                       </TableCell>

@@ -228,6 +228,7 @@ export interface UpdateInternRequest extends Partial<CreateInternRequest> { }
 // Client Types (Backend)
 export interface ClientBackend {
     _id: string;
+    clientId?: string;
     clientName: string;
     contactNumber: string;
     email: string;
@@ -514,6 +515,7 @@ export const adaptEmployeeData = (employee: EmployeeBackend): any => {
 export const adaptClientData = (client: ClientBackend): any => {
     return {
         id: client._id,
+        clientId: client.clientId || client.referenceNo,
         name: client.clientName,
         company: client.clientName,
         email: client.email,
