@@ -43,4 +43,9 @@ export const leadApi = {
         const response = await axiosInstance.post(API_ENDPOINTS.LEAD_ADD_FOLLOW_UP(id), data);
         return response.data;
     },
+
+    convertToCustomer: async (id: string) => {
+        const response = await axiosInstance.post(API_ENDPOINTS.LEAD_CONVERT_TO_CUSTOMER(id));
+        return response.data;
+    },
 };

@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import PageHeader from "@/components/PageHeader";
+import TablePagination from "@/components/TablePagination";
 import { Button } from "@/components/ui/button";
 import {
   Plus,
@@ -174,8 +175,25 @@ const Employees = () => {
       if (aInactive !== bInactive) {
         return aInactive ? 1 : -1;
       }
+      // Newest first
+      const dateA = new Date(a.createdAt || a.joinDate || 0).getTime();
+      const dateB = new Date(b.createdAt || b.joinDate || 0).getTime();
+      if (dateA !== dateB) return dateB - dateA;
       return 0;
     });
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, statusFilter]);
+
+  const totalPages = Math.ceil(filteredEmployees.length / itemsPerPage);
+  const paginatedEmployees = filteredEmployees.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   const activeCount = employees.filter((e: any) => e.status !== "inactive").length;
   const inactiveCount = employees.filter((e: any) => e.status === "inactive").length;
@@ -427,7 +445,7 @@ const Employees = () => {
             ) : viewMode === "grid" ? (
               /* Modern Grid Card Layout */
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredEmployees.map((employee: any) => {
+                {paginatedEmployees.map((employee: any) => {
                   const isInactive = employee.status === "inactive";
                   return (
                     <div
@@ -610,7 +628,7 @@ const Employees = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredEmployees.map((employee: any) => {
+                    {paginatedEmployees.map((employee: any) => {
                       const isInactive = employee.status === "inactive";
                       return (
                         <TableRow key={employee.id} className={isInactive ? "bg-destructive/[0.02]" : ""}>
@@ -725,6 +743,16 @@ const Employees = () => {
                 </Table>
               </div>
             )}
+
+            <TablePagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              totalItems={filteredEmployees.length}
+              itemsPerPage={itemsPerPage}
+              itemName="employees"
+              className="rounded-xl border"
+            />
           </TabsContent>
 
           <TabsContent value="attendance" className="mt-6">

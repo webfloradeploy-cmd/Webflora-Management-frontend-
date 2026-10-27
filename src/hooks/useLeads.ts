@@ -113,3 +113,19 @@ export const useAddFollowUp = () => {
         },
     });
 };
+
+export const useConvertToCustomer = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (id: string) => leadApi.convertToCustomer(id),
+        onSuccess: (res) => {
+            queryClient.invalidateQueries({ queryKey: ["leads"] });
+            queryClient.invalidateQueries({ queryKey: ["clients"] });
+            toast.success(res?.message || "Lead converted to customer and removed from leads!");
+        },
+        onError: (error: any) => {
+            const message = error.response?.data?.message || "Failed to convert lead to customer";
+            toast.error(message);
+        },
+    });
+};

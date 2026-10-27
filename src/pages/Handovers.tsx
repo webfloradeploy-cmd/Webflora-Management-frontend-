@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import PageHeader from "@/components/PageHeader";
+import TablePagination from "@/components/TablePagination";
 import StatusBadge from "@/components/StatusBadge";
 import StatusSelect from "@/components/StatusSelect";
 import { Button } from "@/components/ui/button";
@@ -101,6 +102,13 @@ const Handovers = () => {
         .filter((a: any) => a.status !== 'inactive')
         .sort((a, b) => a.name.localeCompare(b.name));
 
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 10;
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [search, statusFilter]);
+
     const filteredHandovers = handovers.filter((h: any) => {
         const matchesSearch =
             h.projectName?.toLowerCase().includes(search.toLowerCase()) ||
@@ -111,6 +119,20 @@ const Handovers = () => {
             h.status === statusFilter;
         return matchesSearch && matchesStatus;
     });
+
+    // Recent added at top
+    const sortedHandovers = [...filteredHandovers].sort((a: any, b: any) => {
+        const dateA = new Date(a.createdAt || a.handoverDate || 0).getTime();
+        const dateB = new Date(b.createdAt || b.handoverDate || 0).getTime();
+        if (dateA !== dateB) return dateB - dateA;
+        return 0;
+    });
+
+    const totalPages = Math.ceil(sortedHandovers.length / itemsPerPage);
+    const paginatedHandovers = sortedHandovers.slice(
+        (currentPage - 1) * itemsPerPage,
+        currentPage * itemsPerPage
+    );
 
     const handleCreateHandover = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -261,7 +283,7 @@ const Handovers = () => {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {filteredHandovers.map((handover: any) => (
+                                {paginatedHandovers.map((handover: any) => (
                                     <TableRow key={handover.id}>
                                         <TableCell className="font-medium">{handover.projectName}</TableCell>
                                         <TableCell>{handover.assigneeName}</TableCell>
@@ -316,13 +338,21 @@ const Handovers = () => {
                                         )}
                                     </TableRow>
                                 ))}
-                                {filteredHandovers.length === 0 && (
+                                {sortedHandovers.length === 0 && (
                                     <TableRow>
                                         <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">No handovers found.</TableCell>
                                     </TableRow>
                                 )}
                             </TableBody>
                         </Table>
+                        <TablePagination
+                            currentPage={currentPage}
+                            totalPages={totalPages}
+                            onPageChange={setCurrentPage}
+                            totalItems={sortedHandovers.length}
+                            itemsPerPage={itemsPerPage}
+                            itemName="handovers"
+                        />
                     </div>
                 )}
             </div>

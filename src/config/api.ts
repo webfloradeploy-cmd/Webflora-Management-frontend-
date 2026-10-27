@@ -97,6 +97,7 @@ export const API_ENDPOINTS = {
     LEAD_APPROVE_QUOTATION: (id: string) => `/api/lead/${id}/approve-quotation`,
     LEAD_REJECT_QUOTATION: (id: string) => `/api/lead/${id}/reject-quotation`,
     LEAD_ADD_FOLLOW_UP: (id: string) => `/api/lead/${id}/follow-up`,
+    LEAD_CONVERT_TO_CUSTOMER: (id: string) => `/api/lead/${id}/convert-to-customer`,
 
     // Quotation
     QUOTATION_BASE: '/api/quotation',

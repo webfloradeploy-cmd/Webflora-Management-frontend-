@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import PageHeader from "@/components/PageHeader";
+import TablePagination from "@/components/TablePagination";
 import { Button } from "@/components/ui/button";
 import {
   Plus,
@@ -23,6 +24,7 @@ import {
   XCircle,
   History,
   User as UserIcon,
+  UserCheck,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
@@ -53,6 +55,7 @@ import {
   useApproveQuotation,
   useRejectQuotation,
   useAddFollowUp,
+  useConvertToCustomer,
 } from "@/hooks/useLeads";
 import { useEmployees } from "@/hooks/useEmployees";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -129,6 +132,18 @@ const Leads = () => {
   const approveQuotationMutation = useApproveQuotation();
   const rejectQuotationMutation = useRejectQuotation();
   const addFollowUpMutation = useAddFollowUp();
+  const convertToCustomerMutation = useConvertToCustomer();
+  const [leadToConvert, setLeadToConvert] = useState<any | null>(null);
+
+  const handleConfirmConvert = async () => {
+    if (!leadToConvert) return;
+    try {
+      await convertToCustomerMutation.mutateAsync(leadToConvert._id);
+      setLeadToConvert(null);
+    } catch (err) {
+      // Toast handled by mutation
+    }
+  };
 
   const todayStr = new Date().toISOString().split("T")[0];
 
@@ -159,6 +174,32 @@ const Leads = () => {
 
     return true;
   });
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, filterTab]);
+
+  // Recent leads at the top
+  const sortedLeads = [...filteredLeads].sort((a: any, b: any) => {
+    const numA = parseInt((a.leadId || "").replace(/\D/g, "") || "0", 10);
+    const numB = parseInt((b.leadId || "").replace(/\D/g, "") || "0", 10);
+    if (numA && numB && numA !== numB) return numB - numA;
+
+    const dateA = new Date(a.createdAt || 0).getTime();
+    const dateB = new Date(b.createdAt || 0).getTime();
+    if (dateA !== dateB) return dateB - dateA;
+
+    return 0;
+  });
+
+  const totalPages = Math.ceil(sortedLeads.length / itemsPerPage);
+  const paginatedLeads = sortedLeads.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   const handleCreateLead = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -464,7 +505,7 @@ const Leads = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredLeads.map((lead: any) => {
+                  {paginatedLeads.map((lead: any) => {
                     const isInterested = lead.interestStatus === "Interested";
                     const isQuotationRequested =
                       lead.quotationRequest?.status === "Requested" || lead.status === "Quotation Requested";
@@ -602,17 +643,26 @@ const Leads = () => {
 
                         <TableCell className="py-3.5">
                           {isQuotationApproved ? (
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1.5 flex-wrap">
                               <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/30 gap-1 text-[11px] font-bold">
                                 <CheckCircle2 className="w-3 h-3" /> Approved
                               </Badge>
                               <Button
                                 size="sm"
-                                className="h-7 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-2.5 rounded-lg shadow-sm"
+                                className="h-7 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-2 rounded-lg shadow-sm"
                                 onClick={() => navigate(`/quotations?leadId=${lead._id}`)}
                                 title="Create quotation for approved lead"
                               >
                                 <FileText className="w-3 h-3 mr-1" /> Make Quotation
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-7 text-xs border-emerald-500/40 text-emerald-600 hover:bg-emerald-500/10 font-bold px-2 rounded-lg gap-1"
+                                onClick={() => setLeadToConvert(lead)}
+                                title="Convert this lead to a paying Customer (will remove from leads)"
+                              >
+                                <UserCheck className="w-3 h-3" /> Convert to Customer
                               </Button>
                             </div>
                           ) : isQuotationRequested ? (
@@ -676,6 +726,15 @@ const Leads = () => {
                             <Button
                               variant="ghost"
                               size="icon"
+                              className="h-8 w-8 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-500/10"
+                              onClick={() => setLeadToConvert(lead)}
+                              title="Convert to Customer (removes from leads)"
+                            >
+                              <UserCheck className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
                               className="h-8 w-8 text-muted-foreground hover:text-primary"
                               onClick={() => handleEditClick(lead)}
                               title="Edit Lead Details"
@@ -701,6 +760,14 @@ const Leads = () => {
                 </TableBody>
               </Table>
             </div>
+            <TablePagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              totalItems={sortedLeads.length}
+              itemsPerPage={itemsPerPage}
+              itemName="leads"
+            />
           </div>
         )}
       </div>
@@ -1297,6 +1364,40 @@ const Leads = () => {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteLead} className="bg-destructive text-destructive-foreground">
               Delete Lead
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* CONVERT TO CUSTOMER CONFIRMATION */}
+      <AlertDialog open={!!leadToConvert} onOpenChange={(open) => !open && setLeadToConvert(null)}>
+        <AlertDialogContent className="sm:max-w-[460px]">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-foreground">
+              <UserCheck className="w-5 h-5 text-emerald-600" /> Convert Lead to Customer
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2 text-sm text-muted-foreground pt-1">
+              <p>
+                Are you sure you want to convert <strong className="text-foreground">{leadToConvert?.leadName}</strong> into an official Customer?
+              </p>
+              <div className="p-3 rounded-xl bg-muted/50 border border-border/50 text-xs space-y-1 font-sans">
+                <p><span className="text-muted-foreground">Contact:</span> {leadToConvert?.contactNumber}</p>
+                <p><span className="text-muted-foreground">Email:</span> {leadToConvert?.email || "Not provided"}</p>
+                <p><span className="text-muted-foreground">Location:</span> {leadToConvert?.address || "N/A"}</p>
+              </div>
+              <p className="text-xs text-amber-600 font-semibold bg-amber-500/10 p-2.5 rounded-lg border border-amber-500/20">
+                Notice: Once converted, a new Customer profile (with auto-assigned unique CUST ID) will be created, and this entry will be removed from your Leads list.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="mt-2">
+            <AlertDialogCancel disabled={convertToCustomerMutation.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmConvert}
+              disabled={convertToCustomerMutation.isPending}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
+            >
+              {convertToCustomerMutation.isPending ? "Converting..." : "Confirm & Convert"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -27,6 +27,7 @@ import { Label } from "@/components/ui/label";
 import { useClients, useCreateClient, useUpdateClient, useDeleteClient } from "@/hooks/useClients";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+import TablePagination from "@/components/TablePagination";
 import {
   Table,
   TableBody,
@@ -72,6 +73,13 @@ const Clients = () => {
   const deleteClient = useDeleteClient();
   const { toast } = useToast();
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search]);
+
   const filteredClients = clients.filter(
     (c: any) =>
       c.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -79,6 +87,25 @@ const Clients = () => {
       (c.referenceNo && c.referenceNo.toLowerCase().includes(search.toLowerCase())) ||
       (c.email && c.email.toLowerCase().includes(search.toLowerCase())) ||
       (c.phone && c.phone.includes(search))
+  );
+
+  // Recent added at the top
+  const sortedClients = [...filteredClients].sort((a: any, b: any) => {
+    const numA = parseInt((a.clientId || a.referenceNo || "").replace(/\D/g, "") || "0", 10);
+    const numB = parseInt((b.clientId || b.referenceNo || "").replace(/\D/g, "") || "0", 10);
+    if (numA && numB && numA !== numB) return numB - numA;
+
+    const dateA = new Date(a.createdAt || a.joinDate || 0).getTime();
+    const dateB = new Date(b.createdAt || b.joinDate || 0).getTime();
+    if (dateA !== dateB) return dateB - dateA;
+
+    return 0;
+  });
+
+  const totalPages = Math.ceil(sortedClients.length / itemsPerPage);
+  const paginatedClients = sortedClients.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
   );
 
   const handleCreateClient = async (e: React.FormEvent) => {
@@ -226,7 +253,7 @@ const Clients = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredClients.map((client: any) => (
+                  {paginatedClients.map((client: any) => (
                     <TableRow key={client.id} className="group hover:bg-muted/30 transition-colors">
                       <TableCell className="py-3.5">
                         <span className="font-mono text-xs font-bold px-2.5 py-1 rounded-md bg-primary/10 text-primary border border-primary/20 whitespace-nowrap">
@@ -270,6 +297,14 @@ const Clients = () => {
                 </TableBody>
               </Table>
             </div>
+            <TablePagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              totalItems={sortedClients.length}
+              itemsPerPage={itemsPerPage}
+              itemName="clients"
+            />
           </div>
         )}
       </div>

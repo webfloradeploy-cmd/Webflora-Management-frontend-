@@ -11,6 +11,7 @@ import { useProjects, useCreateProject, useDeleteProject, useUpdateProject } fro
 import { useClients } from "@/hooks/useClients";
 import { useEmployees } from "@/hooks/useEmployees";
 import { useToast } from "@/hooks/use-toast";
+import TablePagination from "@/components/TablePagination";
 import {
   Dialog,
   DialogContent,
@@ -83,6 +84,12 @@ const Projects = () => {
   const deleteProject = useDeleteProject();
 
   const [statusFilter, setStatusFilter] = useState("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, statusFilter]);
 
   const filteredProjects = projects.filter((p: any) => {
     const matchesSearch =
@@ -94,6 +101,20 @@ const Projects = () => {
       p.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
+
+  // Newest added at top
+  const sortedProjects = [...filteredProjects].sort((a: any, b: any) => {
+    const dateA = new Date(a.createdAt || a.startDate || 0).getTime();
+    const dateB = new Date(b.createdAt || b.startDate || 0).getTime();
+    if (dateA !== dateB) return dateB - dateA;
+    return 0;
+  });
+
+  const totalPages = Math.ceil(sortedProjects.length / itemsPerPage);
+  const paginatedProjects = sortedProjects.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -251,7 +272,7 @@ const Projects = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredProjects.map((project: any) => (
+                  {paginatedProjects.map((project: any) => (
                     <TableRow key={project.id} className="group hover:bg-muted/30 transition-colors">
                       <TableCell className="font-medium py-3.5 italic-text tracking-tight">
                         {project.name}
@@ -315,7 +336,7 @@ const Projects = () => {
                               });
                               setIsEditDialogOpen(true);
                             }} title="Edit Project">
-                            <Edit className="h-4 w-4" />
+                              <Edit className="h-4 w-4" />
                           </Button>
                           <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive"
                             onClick={() => deleteProject.mutate(project.id)} title="Delete Project">
@@ -328,6 +349,14 @@ const Projects = () => {
                 </TableBody>
               </Table>
             </div>
+            <TablePagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              totalItems={sortedProjects.length}
+              itemsPerPage={itemsPerPage}
+              itemName="projects"
+            />
           </div>
         )}
       </div>
