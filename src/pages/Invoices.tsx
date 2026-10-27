@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import PageHeader from "@/components/PageHeader";
 import StatusBadge from "@/components/StatusBadge";
+import TablePagination from "@/components/TablePagination";
 import { Button } from "@/components/ui/button";
 import { Plus, Search, Edit, Trash2, Eye, FileDown, History } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -123,6 +124,13 @@ const Invoices = () => {
   const deleteInvoice = useDeleteInvoice();
   const { toast } = useToast();
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, statusFilter]);
+
   const filteredInvoices = invoices.filter(
     (inv: any) => {
       const matchesSearch = inv.number?.toLowerCase().includes(search.toLowerCase()) ||
@@ -134,6 +142,24 @@ const Invoices = () => {
       
       return matchesSearch && matchesStatus;
     }
+  );
+
+  // Newest added at top
+  const sortedInvoices = [...filteredInvoices].sort((a: any, b: any) => {
+    const numA = parseInt((a.number || "").replace(/\D/g, "") || "0", 10);
+    const numB = parseInt((b.number || "").replace(/\D/g, "") || "0", 10);
+    if (numA && numB && numA !== numB) return numB - numA;
+
+    const dateA = new Date(a.date || a.createdAt || 0).getTime();
+    const dateB = new Date(b.date || b.createdAt || 0).getTime();
+    if (dateA !== dateB) return dateB - dateA;
+    return 0;
+  });
+
+  const totalPages = Math.ceil(sortedInvoices.length / itemsPerPage);
+  const paginatedInvoices = sortedInvoices.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
   );
 
   const handleCreateInvoice = async (e: React.FormEvent) => {
@@ -391,7 +417,7 @@ const Invoices = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredInvoices.map((invoice: any) => (
+                {paginatedInvoices.map((invoice: any) => (
                   <TableRow key={invoice.id}>
                     <TableCell className="font-medium">{invoice.number}</TableCell>
                     <TableCell>{invoice.clientName}</TableCell>
@@ -440,6 +466,14 @@ const Invoices = () => {
                 ))}
               </TableBody>
             </Table>
+            <TablePagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              totalItems={sortedInvoices.length}
+              itemsPerPage={itemsPerPage}
+              itemName="invoices"
+            />
           </div>
         )}
       </div>

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import PageHeader from "@/components/PageHeader";
+import TablePagination from "@/components/TablePagination";
 import { Button } from "@/components/ui/button";
 import { Plus, Search, Edit, Trash2, Eye, FileDown, MessageSquare, X, CheckSquare, Clock, DollarSign, FileText, CheckCircle2, Mail, Send, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -775,6 +776,13 @@ const Quotations = () => {
     setSelectedQuotation(null);
   };
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, statusFilter]);
+
   const filteredQuotations = (Array.isArray(quotations) ? quotations : []).filter((q: any) => {
     const matchesSearch =
       q.quotationNo?.toLowerCase().includes(search.toLowerCase()) ||
@@ -786,6 +794,24 @@ const Quotations = () => {
     const matchesStatus = statusFilter === "all" || (q.status || "").toLowerCase() === statusFilter.toLowerCase();
     return matchesSearch && matchesStatus;
   });
+
+  // Recent added at top
+  const sortedQuotations = [...filteredQuotations].sort((a: any, b: any) => {
+    const numA = parseInt((a.quotationNo || "").replace(/\D/g, "") || "0", 10);
+    const numB = parseInt((b.quotationNo || "").replace(/\D/g, "") || "0", 10);
+    if (numA && numB && numA !== numB) return numB - numA;
+
+    const dateA = new Date(a.date || a.createdAt || 0).getTime();
+    const dateB = new Date(b.date || b.createdAt || 0).getTime();
+    if (dateA !== dateB) return dateB - dateA;
+    return 0;
+  });
+
+  const totalPages = Math.ceil(sortedQuotations.length / itemsPerPage);
+  const paginatedQuotations = sortedQuotations.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -1594,7 +1620,7 @@ const Quotations = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredQuotations.map((q: any) => (
+                  {paginatedQuotations.map((q: any) => (
                     <TableRow key={q._id} className="group hover:bg-muted/30 transition-colors">
                       <TableCell className="font-medium py-3.5 tracking-tight">
                         {q.quotationNo}
@@ -1671,6 +1697,14 @@ const Quotations = () => {
                 </TableBody>
               </Table>
             </div>
+            <TablePagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              totalItems={sortedQuotations.length}
+              itemsPerPage={itemsPerPage}
+              itemName="quotations"
+            />
           </div>
         )}
       </div>

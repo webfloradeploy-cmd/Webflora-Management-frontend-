@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import PageHeader from "@/components/PageHeader";
 import StatCard from "@/components/StatCard";
+import TablePagination from "@/components/TablePagination";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -111,6 +112,13 @@ const Agreements = () => {
 
   const totalValue = agreements.reduce((sum: number, a: any) => sum + (a.payment?.totalCost || 0), 0);
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, statusFilter, typeFilter]);
+
   // Filtered Agreements
   const filteredAgreements = agreements.filter((a: any) => {
     const matchesSearch =
@@ -124,6 +132,24 @@ const Agreements = () => {
 
     return matchesSearch && matchesStatus && matchesType;
   });
+
+  // Recent added at top
+  const sortedAgreements = [...filteredAgreements].sort((a: any, b: any) => {
+    const numA = parseInt((a.agreementId || "").replace(/\D/g, "") || "0", 10);
+    const numB = parseInt((b.agreementId || "").replace(/\D/g, "") || "0", 10);
+    if (numA && numB && numA !== numB) return numB - numA;
+
+    const dateA = new Date(a.createdAt || 0).getTime();
+    const dateB = new Date(b.createdAt || 0).getTime();
+    if (dateA !== dateB) return dateB - dateA;
+    return 0;
+  });
+
+  const totalPages = Math.ceil(sortedAgreements.length / itemsPerPage);
+  const paginatedAgreements = sortedAgreements.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   // Canvas Handlers
   const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
@@ -447,7 +473,7 @@ const Agreements = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredAgreements.map((agr: any) => (
+              {paginatedAgreements.map((agr: any) => (
                 <TableRow key={agr._id} className="hover:bg-white/[0.01] border-b border-white/5 transition-colors">
                   <TableCell className="font-mono text-xs font-bold text-primary px-6 py-4">{agr.agreementId}</TableCell>
                   <TableCell className="px-6 py-4">
@@ -541,6 +567,14 @@ const Agreements = () => {
             </TableBody>
           </Table>
         )}
+        <TablePagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          totalItems={sortedAgreements.length}
+          itemsPerPage={itemsPerPage}
+          itemName="agreements"
+        />
       </div>
 
       {/* Signature Pad Dialog */}

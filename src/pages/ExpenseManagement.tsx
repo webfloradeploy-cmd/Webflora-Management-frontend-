@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import expenseService from "@/services/api/expense";
 import { ExpenseBackend } from "@/types/api";
+import TablePagination from "@/components/TablePagination";
 import { Button } from "@/components/ui/button";
 import { Plus, Table as TableIcon, Calendar as CalendarIcon, Trash2, Eye } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -49,6 +50,27 @@ const ExpenseManagement = () => {
         queryKey: ["expenses", returnStatusFilter],
         queryFn: () => expenseService.getExpenses(returnStatusFilter !== "all" ? { returnStatus: returnStatusFilter } : undefined),
     });
+
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 10;
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [returnStatusFilter]);
+
+    // Recent added at top
+    const sortedExpenses = [...(expenses || [])].sort((a: any, b: any) => {
+        const dateA = new Date(a.date || a.createdAt || 0).getTime();
+        const dateB = new Date(b.date || b.createdAt || 0).getTime();
+        if (dateA !== dateB) return dateB - dateA;
+        return 0;
+    });
+
+    const totalPages = Math.ceil(sortedExpenses.length / itemsPerPage);
+    const paginatedExpenses = sortedExpenses.slice(
+        (currentPage - 1) * itemsPerPage,
+        currentPage * itemsPerPage
+    );
 
     const handleDelete = async (id: string) => {
         try {
@@ -142,7 +164,7 @@ const ExpenseManagement = () => {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {expenses?.map((exp) => (
+                                {paginatedExpenses.map((exp: any) => (
                                     <TableRow key={exp._id}>
                                         <TableCell>{format(new Date(exp.date), "dd MMM yyyy")}</TableCell>
                                         <TableCell className="font-medium">{exp.description}</TableCell>
@@ -213,15 +235,23 @@ const ExpenseManagement = () => {
                                         </TableCell>
                                     </TableRow>
                                 ))}
-                                {(!expenses || expenses.length === 0) && (
+                                {sortedExpenses.length === 0 && (
                                     <TableRow>
-                                        <TableCell colSpan={8} className="text-center py-10 text-muted-foreground">
+                                        <TableCell colSpan={11} className="text-center py-10 text-muted-foreground">
                                             No expenses found.
                                         </TableCell>
                                     </TableRow>
                                 )}
                             </TableBody>
                         </Table>
+                        <TablePagination
+                            currentPage={currentPage}
+                            totalPages={totalPages}
+                            onPageChange={setCurrentPage}
+                            totalItems={sortedExpenses.length}
+                            itemsPerPage={itemsPerPage}
+                            itemName="expenses"
+                        />
                     </div>
                 </TabsContent>
             </Tabs>
