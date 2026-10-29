@@ -420,7 +420,16 @@ const Invoices = () => {
                 {paginatedInvoices.map((invoice: any) => (
                   <TableRow key={invoice.id}>
                     <TableCell className="font-medium">{invoice.number}</TableCell>
-                    <TableCell>{invoice.clientName}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1.5">
+                        {invoice.customerCode && (
+                          <span className="font-mono text-[11px] font-bold px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 whitespace-nowrap">
+                            {invoice.customerCode}
+                          </span>
+                        )}
+                        <span>{invoice.clientName}</span>
+                      </div>
+                    </TableCell>
                     <TableCell>{invoice.projectName}</TableCell>
                     <TableCell>{formatDate(invoice.date)}</TableCell>
                     <TableCell className="font-medium text-muted-foreground">{formatCurrency(invoice.total)}</TableCell>
@@ -1232,7 +1241,14 @@ const Invoices = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label className="text-muted-foreground">Client</Label>
-                  <p className="text-foreground font-medium mt-1">{selectedInvoice.clientName}</p>
+                  <p className="text-foreground font-medium mt-1 flex items-center gap-2">
+                    {selectedInvoice.customerCode && (
+                      <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
+                        {selectedInvoice.customerCode}
+                      </span>
+                    )}
+                    <span>{selectedInvoice.clientName}</span>
+                  </p>
                 </div>
                 <div>
                   <Label className="text-muted-foreground">Project</Label>

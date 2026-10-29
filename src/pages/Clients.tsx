@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import PageHeader from "@/components/PageHeader";
 import StatusBadge from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
-import { Plus, Mail, Building2, Search, Edit, Trash2 } from "lucide-react";
+import { Plus, Mail, Building2, Search, Edit, Trash2, FolderGit2, Calendar, IndianRupee, ExternalLink, ArrowRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
   Dialog,
@@ -42,8 +42,11 @@ const formatCurrency = (value: number) =>
   new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(value);
 
 const Clients = () => {
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [selectedClient, setSelectedClient] = useState<any | null>(null);
+  const [viewingProjectsClient, setViewingProjectsClient] = useState<any | null>(null);
+  const [isProjectsDialogOpen, setIsProjectsDialogOpen] = useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [clientToDelete, setClientToDelete] = useState<any | null>(null);
@@ -276,12 +279,34 @@ const Clients = () => {
                         {formatCurrency(client.totalBilled)}
                       </TableCell>
                       <TableCell className="text-sm py-3.5">
-                        <Badge variant="secondary" className="font-medium">
-                          {client.projects} Projects
+                        <Badge
+                          variant="secondary"
+                          className="font-medium cursor-pointer hover:bg-primary/20 hover:text-primary transition-all duration-200 gap-1.5 py-1 px-2.5 shadow-sm border border-border/40 hover:border-primary/40 group/badge active:scale-95 whitespace-nowrap"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setViewingProjectsClient(client);
+                            setIsProjectsDialogOpen(true);
+                          }}
+                          title={`Click to view all ${client.projects} projects for ${client.name}`}
+                        >
+                          <FolderGit2 className="w-3.5 h-3.5 text-primary group-hover/badge:scale-110 transition-transform" />
+                          <span>{client.projects} {client.projects === 1 ? "Project" : "Projects"}</span>
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right py-3.5">
                         <div className="flex justify-end gap-1 opacity-100 group-hover:opacity-100 transition-opacity">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-primary"
+                            onClick={() => {
+                              setViewingProjectsClient(client);
+                              setIsProjectsDialogOpen(true);
+                            }}
+                            title="View Client Projects"
+                          >
+                            <FolderGit2 className="h-4 w-4" />
+                          </Button>
                           <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary"
                             onClick={() => handleEditClick(client)} title="Edit Client">
                             <Edit className="h-4 w-4" />
@@ -393,7 +418,14 @@ const Clients = () => {
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle>Edit Client</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              Edit Client
+              {selectedClient?.clientId && (
+                <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
+                  {selectedClient.clientId}
+                </span>
+              )}
+            </DialogTitle>
           </DialogHeader>
           <form onSubmit={handleUpdateClient} className="space-y-4 mt-4">
             <div className="space-y-2">
@@ -464,6 +496,156 @@ const Clients = () => {
               </Button>
             </div>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Client Projects Dialog */}
+      <Dialog open={isProjectsDialogOpen} onOpenChange={setIsProjectsDialogOpen}>
+        <DialogContent className="sm:max-w-[700px] max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <div className="flex items-start justify-between gap-3 pr-6">
+              <div>
+                <DialogTitle className="text-xl font-bold flex items-center gap-2">
+                  <FolderGit2 className="w-5 h-5 text-primary" />
+                  <span>Projects for {viewingProjectsClient?.name}</span>
+                </DialogTitle>
+                <DialogDescription className="mt-1">
+                  Active and completed project contracts, technical scope, and billed amounts.
+                </DialogDescription>
+              </div>
+              {viewingProjectsClient?.clientId && (
+                <span className="font-mono text-xs font-bold px-2.5 py-1 rounded-md bg-primary/10 text-primary border border-primary/20 whitespace-nowrap">
+                  {viewingProjectsClient.clientId}
+                </span>
+              )}
+            </div>
+          </DialogHeader>
+
+          <div className="space-y-4 mt-2">
+            {/* Client summary metrics */}
+            <div className="grid grid-cols-3 gap-3 p-3 rounded-xl bg-muted/40 border border-border/50 text-xs">
+              <div>
+                <span className="text-muted-foreground block text-[11px]">Total Projects</span>
+                <span className="text-sm font-bold text-foreground">
+                  {viewingProjectsClient?.projectsList?.length || viewingProjectsClient?.projects || 0}
+                </span>
+              </div>
+              <div>
+                <span className="text-muted-foreground block text-[11px]">Total Billed</span>
+                <span className="text-sm font-bold text-foreground">
+                  {formatCurrency(viewingProjectsClient?.totalBilled || 0)}
+                </span>
+              </div>
+              <div>
+                <span className="text-muted-foreground block text-[11px]">Pending Due</span>
+                <span className="text-sm font-bold text-amber-500">
+                  {formatCurrency(viewingProjectsClient?.totalDue || 0)}
+                </span>
+              </div>
+            </div>
+
+            {/* Projects list */}
+            {(!viewingProjectsClient?.projectsList || viewingProjectsClient.projectsList.length === 0) ? (
+              <div className="text-center py-12 border-2 border-dashed border-border rounded-xl space-y-3">
+                <FolderGit2 className="w-10 h-10 text-muted-foreground mx-auto" />
+                <p className="text-sm font-semibold text-foreground">No projects found for {viewingProjectsClient?.name}</p>
+                <p className="text-xs text-muted-foreground">This client has no active or past projects registered yet.</p>
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    setIsProjectsDialogOpen(false);
+                    navigate(`/projects?create=true&client=${viewingProjectsClient?.id}`);
+                  }}
+                  className="gap-1.5"
+                >
+                  <Plus className="w-4 h-4" /> Create First Project
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {viewingProjectsClient.projectsList.map((project: any) => (
+                  <div
+                    key={project._id}
+                    className="p-4 rounded-xl border border-border/60 bg-card hover:bg-muted/20 transition-colors space-y-2.5"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <h4 className="font-bold text-sm text-foreground flex items-center gap-2">
+                          {project.projectName}
+                        </h4>
+                        {project.description && (
+                          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+                            {project.description}
+                          </p>
+                        )}
+                      </div>
+                      <StatusBadge status={project.status || "New"} />
+                    </div>
+
+                    <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-border/40 text-xs text-muted-foreground">
+                      <div className="flex items-center gap-4">
+                        <span className="font-semibold text-foreground flex items-center gap-1">
+                          <IndianRupee className="w-3.5 h-3.5 text-primary" />
+                          {Number(project.totalAmount || 0).toLocaleString("en-IN")}
+                        </span>
+                        {project.startDate && (
+                          <span className="flex items-center gap-1">
+                            <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
+                            {new Date(project.startDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                          </span>
+                        )}
+                      </div>
+
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 text-xs text-primary hover:text-primary hover:bg-primary/10 gap-1 px-2"
+                        onClick={() => {
+                          setIsProjectsDialogOpen(false);
+                          navigate(`/projects?search=${encodeURIComponent(project.projectName)}`);
+                        }}
+                      >
+                        <span>Open in Projects</span>
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+
+                    {Array.isArray(project.techStack) && project.techStack.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 pt-1">
+                        {project.techStack.map((tech: string, i: number) => (
+                          <span
+                            key={i}
+                            className="text-[10px] font-medium px-2 py-0.5 rounded bg-secondary text-secondary-foreground"
+                          >
+                            {tech}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="mt-4 flex items-center justify-between sm:justify-between">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setIsProjectsDialogOpen(false);
+                navigate(`/projects?search=${encodeURIComponent(viewingProjectsClient?.name || "")}`);
+              }}
+              className="gap-1.5"
+            >
+              <span>View All in Projects Page</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Button>
+            <Button type="button" onClick={() => setIsProjectsDialogOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

@@ -512,7 +512,7 @@ export const adaptEmployeeData = (employee: EmployeeBackend): any => {
     };
 };
 
-export const adaptClientData = (client: ClientBackend): any => {
+export const adaptClientData = (client: any): any => {
     return {
         id: client._id,
         clientId: client.clientId || client.referenceNo,
@@ -520,10 +520,11 @@ export const adaptClientData = (client: ClientBackend): any => {
         company: client.clientName,
         email: client.email,
         phone: client.contactNumber,
-        projects: 0, // Default value
-        totalBilled: 0, // Default value
+        projects: client.projectsCount ?? (Array.isArray(client.projectsList) ? client.projectsList.length : 0),
+        projectsList: client.projectsList || [],
+        totalBilled: client.totalBilled || 0,
         status: 'active' as const,
-        avatar: client.clientName.split(' ').map(n => n[0]).join('').toUpperCase(),
+        avatar: client.clientName ? client.clientName.split(' ').map((n: string) => n[0]).join('').toUpperCase() : '',
         joinDate: client.createdAt,
         address: client.address,
         referenceNo: client.referenceNo,
@@ -565,10 +566,16 @@ export const adaptInvoiceData = (invoice: InvoiceBackend): any => {
         ? allProjects.reduce((sum, p) => sum + (Number((p as any).totalAmount) || 0), 0)
         : (typeof (invoice as any).projectTotal === 'number' ? (invoice as any).projectTotal : amount);
 
+    const customerCode = (client as any)?.clientId || (client as any)?.referenceNo || (invoice as any)?.customerCode || (invoice as any)?.clientIdStr || '';
+    const clientAddress = (invoice as any)?.clientAddress || (client as any)?.address || (invoice as any)?.address || '';
+
     return {
         id: invoice._id,
         number: invoice.invoiceNo,
         clientName: invoice.clientName || client?.clientName || 'Unknown Client',
+        customerCode: customerCode,
+        clientIdStr: customerCode,
+        address: clientAddress,
         projectName: projectName,
         projectId: typeof invoice.projectId === 'string' ? invoice.projectId : firstProject?._id,
         company: invoice.clientName || client?.clientName || 'Unknown Company',

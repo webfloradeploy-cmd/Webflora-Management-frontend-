@@ -860,7 +860,7 @@ const Quotations = () => {
                 <SelectContent>
                   {(Array.isArray(leads) ? leads : []).map((lead: any) => (
                     <SelectItem key={lead._id} value={lead._id}>
-                      {lead.leadName} {lead.companyName ? `(${lead.companyName})` : ''}
+                      {lead.leadId ? `[${lead.leadId}] ` : ''}{lead.leadName} {lead.companyName ? `(${lead.companyName})` : ''}
                     </SelectItem>
                   ))}
                   {/* Fallback option if lead is attached from selectedQuotation but not in active leads list */}

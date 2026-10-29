@@ -393,7 +393,7 @@ const Projects = () => {
                   <SelectContent>
                     {clients.map((client: any) => (
                       <SelectItem key={client.id} value={client.id}>
-                        {client.name}
+                        {client.clientId ? `[${client.clientId}] ` : ''}{client.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -517,7 +517,7 @@ const Projects = () => {
                   <SelectContent>
                     {clients.map((client: any) => (
                       <SelectItem key={client.id} value={client.id}>
-                        {client.name}
+                        {client.clientId ? `[${client.clientId}] ` : ''}{client.name}
                       </SelectItem>
                     ))}
                   </SelectContent>

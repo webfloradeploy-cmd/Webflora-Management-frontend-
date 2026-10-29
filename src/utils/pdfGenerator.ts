@@ -240,8 +240,23 @@ export const generateInvoicePDF = (invoice: any) => {
     doc.setFont("helvetica", "bold");
     doc.text("BILL TO CLIENT", pageWidth - 96, metaY + 6);
 
+    const customerId = invoice.customerCode || 
+                       invoice.clientIdStr || 
+                       (typeof invoice.clientId === 'object' ? (invoice.clientId?.clientId || invoice.clientId?.referenceNo) : '') ||
+                       invoice.customerId ||
+                       invoice.referenceNo || 
+                       "";
+
+    if (customerId) {
+        doc.setFontSize(8);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(PRIMARY_COLOR_RGB[0], PRIMARY_COLOR_RGB[1], PRIMARY_COLOR_RGB[2]);
+        doc.text(`Cust ID: ${customerId}`, pageWidth - 24, metaY + 6, { align: "right" });
+    }
+
     doc.setFontSize(9);
     doc.setTextColor(SLATE_900_RGB[0], SLATE_900_RGB[1], SLATE_900_RGB[2]);
+    doc.setFont("helvetica", "bold");
     const clientNameText = (invoice.clientName || "Valued Client").substring(0, 38);
     doc.text(clientNameText, pageWidth - 96, metaY + 12);
 

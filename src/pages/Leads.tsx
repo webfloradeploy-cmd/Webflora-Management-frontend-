@@ -786,6 +786,11 @@ const Leads = () => {
                 </DialogDescription>
               </div>
               <Badge variant="outline" className="text-xs">
+                {activeFollowUpLead?.leadId && (
+                  <span className="mr-1.5 font-mono font-bold text-primary">
+                    {activeFollowUpLead.leadId}
+                  </span>
+                )}
                 {activeFollowUpLead?.leadName}
               </Badge>
             </div>
@@ -1136,7 +1141,14 @@ const Leads = () => {
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="sm:max-w-[550px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Edit Lead</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              Edit Lead
+              {selectedLead?.leadId && (
+                <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
+                  {selectedLead.leadId}
+                </span>
+              )}
+            </DialogTitle>
             <DialogDescription>Update lead interest, follow-up timeline, and notes.</DialogDescription>
           </DialogHeader>
           <form onSubmit={handleUpdateLead} className="space-y-4 mt-2">
@@ -1271,8 +1283,13 @@ const Leads = () => {
 
           <div className="space-y-4 mt-2">
             <div className="p-3 rounded-xl bg-secondary/30 border border-border/50 text-xs space-y-1">
-              <p>
+              <p className="flex items-center gap-2">
                 <span className="text-muted-foreground">Lead:</span>{" "}
+                {quotationRequestLead?.leadId && (
+                  <span className="font-mono text-[11px] font-bold px-1.5 py-0.2 rounded bg-primary/10 text-primary border border-primary/20">
+                    {quotationRequestLead.leadId}
+                  </span>
+                )}
                 <span className="font-bold text-foreground">{quotationRequestLead?.leadName}</span>
               </p>
               <p>
