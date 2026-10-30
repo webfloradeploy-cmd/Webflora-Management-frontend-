@@ -101,6 +101,7 @@ export default function Outstanding() {
 
   // Helper to calculate exact remaining due for an invoice
   const getInvoiceDue = (inv: any) => {
+    if (!inv) return 0;
     const status = (inv.status || "").toLowerCase();
     if (status === "paid") return 0;
 
@@ -1406,7 +1407,8 @@ export default function Outstanding() {
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => generateInvoicePDF(selectedInvoice)}
+              onClick={() => selectedInvoice && generateInvoicePDF(selectedInvoice)}
+              disabled={!selectedInvoice}
               className="gap-1.5 w-full sm:w-auto"
             >
               <FileDown className="w-4 h-4 text-blue-500" />
@@ -1414,7 +1416,7 @@ export default function Outstanding() {
             </Button>
 
             <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-              {(selectedInvoice?.status || "").toLowerCase() !== "paid" && getInvoiceDue(selectedInvoice) > 0 && (
+              {Boolean(selectedInvoice && (selectedInvoice.status || "").toLowerCase() !== "paid" && getInvoiceDue(selectedInvoice) > 0) && (
                 <Button
                   type="button"
                   size="sm"

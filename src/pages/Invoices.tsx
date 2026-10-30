@@ -139,6 +139,7 @@ const Invoices = () => {
 
   // Helper to calculate exact remaining due for an invoice
   const getInvoiceDue = (inv: any) => {
+    if (!inv) return 0;
     const status = (inv?.status || "").toLowerCase();
     if (status === "paid") return 0;
     const totalObligation = Number(inv?.grandTotal) || (Number(inv?.amount) || 0) + (Number(inv?.previousDue) || 0);
