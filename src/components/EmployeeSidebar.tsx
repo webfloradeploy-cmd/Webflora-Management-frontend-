@@ -20,6 +20,7 @@ import {
   Banknote,
   History,
   CreditCard,
+  CircleDollarSign,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -42,6 +43,7 @@ const getEmployeeNavigation = (permissions?: any) => {
   }
   if (p.invoices) {
     coreItems.push({ to: "/invoices", icon: FileText, label: "Invoices" });
+    coreItems.push({ to: "/outstanding", icon: CircleDollarSign, label: "Outstanding" });
   }
   if (p.clients) {
     coreItems.push({ to: "/clients", icon: Users, label: "Clients" });

@@ -21,6 +21,7 @@ import {
   History,
   CreditCard,
   Download,
+  CircleDollarSign,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -36,6 +37,7 @@ const navigation = [
       { to: "/", icon: LayoutDashboard, label: "Dashboard" },
       { to: "/projects", icon: FolderKanban, label: "Projects" },
       { to: "/invoices", icon: FileText, label: "Invoices" },
+      { to: "/outstanding", icon: CircleDollarSign, label: "Outstanding" },
       { to: "/clients", icon: Users, label: "Clients" },
       { to: "/leads", icon: Users, label: "Leads" },
       { to: "/quotations", icon: FileText, label: "Quotations" },

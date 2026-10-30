@@ -19,6 +19,7 @@ import {
   X,
   Banknote,
   CreditCard,
+  CircleDollarSign,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -32,6 +33,7 @@ const navItems = [
   { to: "/salaries", icon: Banknote, label: "Salaries" },
   { to: "/expenses", icon: CreditCard, label: "Expenses" },
   { to: "/invoices", icon: FileText, label: "Invoices" },
+  { to: "/outstanding", icon: CircleDollarSign, label: "Outstanding" },
   { to: "/agreements", icon: FileText, label: "Agreements" },
   { to: "/projects", icon: FolderKanban, label: "Projects" },
   { to: "/handovers", icon: Briefcase, label: "Handovers" },

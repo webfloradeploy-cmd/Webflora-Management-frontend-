@@ -29,6 +29,7 @@ import Leads from "./pages/Leads";
 import Quotations from "./pages/Quotations";
 import Agreements from "./pages/Agreements";
 import CreateEditAgreement from "./pages/CreateEditAgreement";
+import Outstanding from "./pages/Outstanding";
 
 const queryClient = new QueryClient();
 
@@ -66,6 +67,7 @@ const App = () => (
                       <Route path="/clients" element={<Clients />} />
                       <Route path="/salaries" element={<Salaries />} />
                       <Route path="/invoices" element={<Invoices />} />
+                      <Route path="/outstanding" element={<Outstanding />} />
                       <Route path="/projects" element={<Projects />} />
                       <Route path="/handovers" element={<Handovers />} />
                       <Route path="/employees" element={<Employees />} />

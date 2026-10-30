@@ -224,6 +224,9 @@ export const generateInvoicePDF = (invoice: any) => {
     if (statusText === "PAID") {
         doc.setTextColor(22, 163, 74); // Green 600
         doc.text("PAID", 49, metaY + 22);
+    } else if (statusText === "PARTIAL") {
+        doc.setTextColor(217, 119, 6); // Amber 600
+        doc.text("PARTIAL", 49, metaY + 22);
     } else {
         doc.setTextColor(220, 38, 38); // Red 600
         doc.text("DUE", 49, metaY + 22);
@@ -378,8 +381,8 @@ export const generateInvoicePDF = (invoice: any) => {
     const currentInvoiceAmount = Number(invoice.amount || 0);
     const grandTotal = invoice.grandTotal !== undefined ? Number(invoice.grandTotal) : (currentInvoiceAmount + previousDue);
 
-    let paidAmount = statusText === 'PAID' ? grandTotal : 0;
-    let dueAmount = grandTotal - paidAmount;
+    let paidAmount = Number(invoice.paidAmount) || (statusText === 'PAID' ? grandTotal : 0);
+    let dueAmount = statusText === 'PAID' ? 0 : Math.max(0, grandTotal - paidAmount);
 
     // Project Total & Project Remaining Due
     const projectTotalAmount = Number(invoice.projectTotal || projectTotal || grandTotal);

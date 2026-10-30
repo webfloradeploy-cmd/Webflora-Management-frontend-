@@ -4,7 +4,7 @@ import PageHeader from "@/components/PageHeader";
 import StatusBadge from "@/components/StatusBadge";
 import TablePagination from "@/components/TablePagination";
 import { Button } from "@/components/ui/button";
-import { Plus, Search, Edit, Trash2, Eye, FileDown, History } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Eye, FileDown, History, Banknote, CreditCard, CheckCheck, Clock } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -39,7 +39,7 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { useInvoices, useCreateInvoice, useUpdateInvoice, useDeleteInvoice } from "@/hooks/useInvoices";
+import { useInvoices, useCreateInvoice, useUpdateInvoice, useDeleteInvoice, useRecordPayment } from "@/hooks/useInvoices";
 import { useClients } from "@/hooks/useClients";
 import { useProjects } from "@/hooks/useProjects";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -64,6 +64,15 @@ const Invoices = () => {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [searchParams, setSearchParams] = useSearchParams();
 
+  // Partial Payment Modal state
+  const [paymentInvoice, setPaymentInvoice] = useState<any | null>(null);
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [paymentMode, setPaymentMode] = useState<"full" | "partial">("partial");
+  const [paymentAmountInput, setPaymentAmountInput] = useState<string>("");
+  const [paymentMethod, setPaymentMethod] = useState<string>("Bank Transfer");
+  const [paymentDate, setPaymentDate] = useState<string>(new Date().toISOString().split("T")[0]);
+  const [paymentNotes, setPaymentNotes] = useState<string>("");
+
   useEffect(() => {
     if (searchParams.get("create") === "true") {
       setIsCreateDialogOpen(true);
@@ -84,7 +93,7 @@ const Invoices = () => {
     description: string;
     method: 'Cash' | 'UPI' | 'Bank Transfer' | 'Card' | 'Cheque' | '';
     date: string;
-    status: 'paid' | 'pending' | 'overdue';
+    status: 'paid' | 'pending' | 'partial' | 'overdue';
     previousDue: number;
     items: { service: string; units: string; price: number }[];
   }>({
@@ -122,10 +131,97 @@ const Invoices = () => {
   const createInvoice = useCreateInvoice();
   const updateInvoice = useUpdateInvoice();
   const deleteInvoice = useDeleteInvoice();
+  const recordPaymentMutation = useRecordPayment();
   const { toast } = useToast();
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+
+  // Helper to calculate exact remaining due for an invoice
+  const getInvoiceDue = (inv: any) => {
+    const status = (inv?.status || "").toLowerCase();
+    if (status === "paid") return 0;
+    const totalObligation = Number(inv?.grandTotal) || (Number(inv?.amount) || 0) + (Number(inv?.previousDue) || 0);
+    const paidAmt = Number(inv?.paidAmount) || 0;
+    if (inv?.remainingDue !== undefined) {
+      return Number(inv.remainingDue);
+    }
+    return Math.max(0, totalObligation - paidAmt);
+  };
+
+  const handleOpenPaymentModal = (invoice: any) => {
+    setPaymentInvoice(invoice);
+    const due = getInvoiceDue(invoice);
+    setPaymentAmountInput(due > 0 ? due.toString() : "");
+    setPaymentMode("partial");
+    setPaymentDate(new Date().toISOString().split("T")[0]);
+    setPaymentMethod(invoice.method || "Bank Transfer");
+    setPaymentNotes("");
+    setIsPaymentModalOpen(true);
+  };
+
+  const handleSetQuickPercentage = (percent: number) => {
+    if (!paymentInvoice) return;
+    const maxDue = getInvoiceDue(paymentInvoice);
+    const calculated = Math.round((maxDue * percent) / 100);
+    setPaymentAmountInput(calculated.toString());
+  };
+
+  const handleRecordPaymentSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!paymentInvoice) return;
+    const amount = Number(paymentAmountInput);
+    const maxDue = getInvoiceDue(paymentInvoice);
+
+    if (isNaN(amount) || amount <= 0) {
+      toast({
+        title: "Invalid Amount",
+        description: "Please enter a valid payment amount greater than 0",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (amount > maxDue) {
+      toast({
+        title: "Exceeds Remaining Due",
+        description: `Payment amount (${formatCurrency(amount)}) cannot exceed remaining due (${formatCurrency(maxDue)})`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      await recordPaymentMutation.mutateAsync({
+        id: paymentInvoice.id || paymentInvoice._id,
+        data: {
+          amount,
+          method: paymentMethod,
+          date: paymentDate,
+          notes: paymentNotes || (amount >= maxDue ? "Full settlement" : "Partial installment"),
+        },
+      });
+      toast({
+        title: "Payment Recorded",
+        description: `Successfully recorded payment of ${formatCurrency(amount)}.`,
+      });
+      setIsPaymentModalOpen(false);
+      setPaymentInvoice(null);
+      if (isViewDialogOpen) {
+        setIsViewDialogOpen(false);
+      }
+    } catch (err: any) {
+      toast({
+        title: "Payment Failed",
+        description: err.response?.data?.message || "Failed to record payment",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const parsedPaymentAmount = Number(paymentAmountInput) || 0;
+  const currentInvoiceMaxDue = paymentInvoice ? getInvoiceDue(paymentInvoice) : 0;
+  const remainingAfterPayment = Math.max(0, currentInvoiceMaxDue - parsedPaymentAmount);
+  const willBeFullyPaid = parsedPaymentAmount >= currentInvoiceMaxDue;
 
   useEffect(() => {
     setCurrentPage(1);
@@ -138,7 +234,14 @@ const Invoices = () => {
         inv.projectName?.toLowerCase().includes(search.toLowerCase()) ||
         inv.description?.toLowerCase().includes(search.toLowerCase());
       
-      const matchesStatus = statusFilter === "all" || inv.status === statusFilter;
+      let matchesStatus = true;
+      if (statusFilter === "all") {
+        matchesStatus = true;
+      } else if (statusFilter === "pending") {
+        matchesStatus = inv.status === "pending" || inv.status === "partial" || inv.status === "overdue";
+      } else {
+        matchesStatus = inv.status === statusFilter;
+      }
       
       return matchesSearch && matchesStatus;
     }
@@ -374,7 +477,9 @@ const Invoices = () => {
               <SelectContent>
                 <SelectItem value="all">All Invoices</SelectItem>
                 <SelectItem value="paid">Paid Only</SelectItem>
-                <SelectItem value="pending">Due Only</SelectItem>
+                <SelectItem value="partial">Partially Paid</SelectItem>
+                <SelectItem value="pending">Due / Unpaid</SelectItem>
+                <SelectItem value="overdue">Overdue</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -438,7 +543,18 @@ const Invoices = () => {
                       <StatusBadge status={invoice.status} />
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
+                      <div className="flex justify-end gap-1.5 sm:gap-2">
+                        {invoice.status !== "paid" && getInvoiceDue(invoice) > 0 && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleOpenPaymentModal(invoice)}
+                            className="text-emerald-500 hover:text-emerald-400 hover:bg-emerald-500/10"
+                            title="Record Payment"
+                          >
+                            <Banknote className="w-4 h-4" />
+                          </Button>
+                        )}
                         <Button
                           size="sm"
                           variant="ghost"
@@ -680,6 +796,7 @@ const Invoices = () => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="paid">Paid</SelectItem>
+                    <SelectItem value="partial">Partially Paid</SelectItem>
                     <SelectItem value="pending">Due (Pending)</SelectItem>
                   </SelectContent>
                 </Select>
@@ -1068,6 +1185,7 @@ const Invoices = () => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="paid">Paid</SelectItem>
+                    <SelectItem value="partial">Partially Paid</SelectItem>
                     <SelectItem value="pending">Due (Pending)</SelectItem>
                   </SelectContent>
                 </Select>
@@ -1209,19 +1327,31 @@ const Invoices = () => {
 
       {/* View Invoice Dialog */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[550px] max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <DialogTitle>Invoice Details</DialogTitle>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => generateInvoicePDF(selectedInvoice)}
-                className="gap-2"
-              >
-                <FileDown className="w-4 h-4" />
-                Download PDF
-              </Button>
+              <div className="flex items-center gap-2">
+                {selectedInvoice && selectedInvoice.status !== "paid" && getInvoiceDue(selectedInvoice) > 0 && (
+                  <Button
+                    size="sm"
+                    onClick={() => handleOpenPaymentModal(selectedInvoice)}
+                    className="gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs"
+                  >
+                    <Banknote className="w-4 h-4" />
+                    Pay / Partial Pay
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => generateInvoicePDF(selectedInvoice)}
+                  className="gap-2 text-xs"
+                >
+                  <FileDown className="w-4 h-4" />
+                  Download PDF
+                </Button>
+              </div>
             </div>
           </DialogHeader>
           {selectedInvoice && (
@@ -1292,6 +1422,18 @@ const Invoices = () => {
                   <span className="text-base font-bold text-primary">GRAND TOTAL:</span>
                   <span className="text-2xl font-black text-primary">{formatCurrency(selectedInvoice.grandTotal)}</span>
                 </div>
+                {Number(selectedInvoice.paidAmount) > 0 && (
+                  <div className="flex justify-between items-center text-sm text-emerald-600 dark:text-emerald-400 font-semibold">
+                    <span>Paid So Far:</span>
+                    <span className="font-mono font-bold">- {formatCurrency(selectedInvoice.paidAmount)}</span>
+                  </div>
+                )}
+                {selectedInvoice.status !== 'paid' && (
+                  <div className="flex justify-between items-center text-sm font-bold text-amber-600 dark:text-amber-400 pt-1 border-t border-border/30">
+                    <span>Remaining Due:</span>
+                    <span className="font-mono text-base">{formatCurrency(getInvoiceDue(selectedInvoice))}</span>
+                  </div>
+                )}
                 {selectedInvoice.projectDue > 0 && (
                   <div className="pt-2 border-t border-dashed border-orange-300 dark:border-orange-800 flex justify-between items-center text-xs text-orange-600 dark:text-orange-400">
                     <span className="font-semibold">Project Remaining Due:</span>
@@ -1299,10 +1441,43 @@ const Invoices = () => {
                   </div>
                 )}
               </div>
-              {selectedInvoice.status !== 'paid' && selectedInvoice.grandTotal > 0 && (
+              {selectedInvoice.status !== 'paid' && getInvoiceDue(selectedInvoice) > 0 && (
                 <div className="bg-orange-500/10 border border-orange-500/20 rounded-lg p-3 flex justify-between items-center">
                   <span className="text-sm font-medium text-orange-700 dark:text-orange-400">Please pay on UPI ID:</span>
                   <span className="text-sm font-bold text-orange-600 dark:text-orange-500 select-all cursor-pointer">8540814729@upi</span>
+                </div>
+              )}
+              {/* Payment History Installments Table */}
+              {Array.isArray(selectedInvoice.payments) && selectedInvoice.payments.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-muted-foreground">
+                    <History className="w-3.5 h-3.5 text-primary" />
+                    <span>Payment Installments ({selectedInvoice.payments.length})</span>
+                  </div>
+                  <div className="rounded-lg border border-border overflow-hidden text-xs">
+                    <Table>
+                      <TableHeader className="bg-muted/50">
+                        <TableRow>
+                          <TableHead className="py-1.5 text-xs">Date</TableHead>
+                          <TableHead className="py-1.5 text-xs">Method</TableHead>
+                          <TableHead className="py-1.5 text-xs">Notes</TableHead>
+                          <TableHead className="py-1.5 text-xs text-right">Amount</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {selectedInvoice.payments.map((p: any, idx: number) => (
+                          <TableRow key={idx}>
+                            <TableCell className="py-1.5 text-muted-foreground whitespace-nowrap">{formatDate(p.date)}</TableCell>
+                            <TableCell className="py-1.5 font-medium">{p.method || "Bank"}</TableCell>
+                            <TableCell className="py-1.5 text-muted-foreground truncate max-w-[120px]">{p.notes || "—"}</TableCell>
+                            <TableCell className="py-1.5 text-right font-mono font-bold text-emerald-500">
+                              {formatCurrency(Number(p.amount) || 0)}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
                 </div>
               )}
               {selectedInvoice.items && selectedInvoice.items.length > 0 && (
@@ -1337,6 +1512,212 @@ const Invoices = () => {
                 </div>
               )}
             </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Partial / Full Payment Dialog */}
+      <Dialog open={isPaymentModalOpen} onOpenChange={setIsPaymentModalOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <DialogTitle className="text-lg font-bold flex items-center gap-2">
+                  <CreditCard className="w-5 h-5 text-emerald-500" />
+                  <span>Record Payment</span>
+                </DialogTitle>
+                <div className="text-xs text-muted-foreground mt-0.5">
+                  Record full or partial installment for invoice{" "}
+                  <strong className="text-foreground font-mono">
+                    {paymentInvoice?.number || paymentInvoice?.invoiceNo}
+                  </strong>
+                </div>
+              </div>
+              {paymentInvoice?.customerCode && (
+                <Badge variant="outline" className="font-mono text-xs font-bold text-primary">
+                  {paymentInvoice.customerCode}
+                </Badge>
+              )}
+            </div>
+          </DialogHeader>
+
+          {paymentInvoice && (
+            <form onSubmit={handleRecordPaymentSubmit} className="space-y-4 mt-2">
+              {/* Financial Snapshot Card */}
+              <div className="grid grid-cols-3 gap-2.5 p-3 rounded-xl bg-muted/40 border border-border/60 text-xs">
+                <div>
+                  <span className="text-muted-foreground block text-[11px]">Invoice Total</span>
+                  <span className="font-mono font-bold text-foreground text-sm">
+                    {formatCurrency(Number(paymentInvoice.grandTotal) || (Number(paymentInvoice.amount) || 0) + (Number(paymentInvoice.previousDue) || 0))}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground block text-[11px]">Already Paid</span>
+                  <span className="font-mono font-bold text-emerald-500 text-sm">
+                    {formatCurrency(Number(paymentInvoice.paidAmount) || 0)}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground block text-[11px]">Remaining Due</span>
+                  <span className="font-mono font-bold text-rose-500 text-sm">
+                    {formatCurrency(currentInvoiceMaxDue)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Quick Payment Ratio Buttons */}
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Quick Amount Select</Label>
+                <div className="grid grid-cols-4 gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="text-xs h-8"
+                    onClick={() => handleSetQuickPercentage(25)}
+                  >
+                    25%
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="text-xs h-8"
+                    onClick={() => handleSetQuickPercentage(50)}
+                  >
+                    50%
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="text-xs h-8"
+                    onClick={() => handleSetQuickPercentage(75)}
+                  >
+                    75%
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="text-xs h-8 font-bold border-emerald-500/40 text-emerald-500 hover:bg-emerald-500/10"
+                    onClick={() => handleSetQuickPercentage(100)}
+                  >
+                    Full 100%
+                  </Button>
+                </div>
+              </div>
+
+              {/* Amount to Pay Input */}
+              <div className="space-y-1.5">
+                <Label htmlFor="inv-pay-amount" className="text-xs font-semibold">
+                  Payment Amount to Record (₹) *
+                </Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-bold">₹</span>
+                  <Input
+                    id="inv-pay-amount"
+                    type="number"
+                    min="1"
+                    max={currentInvoiceMaxDue}
+                    step="any"
+                    value={paymentAmountInput}
+                    onChange={(e) => setPaymentAmountInput(e.target.value)}
+                    placeholder="Enter payment amount"
+                    className="pl-8 font-mono text-base font-bold"
+                    required
+                  />
+                </div>
+
+                {/* Real-time Calculation Indicator */}
+                <div className="flex items-center justify-between p-2.5 rounded-lg bg-secondary/40 border border-border/40 text-xs">
+                  <span className="text-muted-foreground">Remaining after this payment:</span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono font-bold text-foreground">
+                      {formatCurrency(remainingAfterPayment)}
+                    </span>
+                    <Badge
+                      variant="outline"
+                      className={
+                        willBeFullyPaid
+                          ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/30 text-[10px] font-bold"
+                          : "bg-amber-500/10 text-amber-500 border-amber-500/30 text-[10px] font-bold"
+                      }
+                    >
+                      {willBeFullyPaid ? "Will Be Fully Paid" : "Will Be Partial Due"}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+
+              {/* Payment Method & Date */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="inv-pay-method" className="text-xs font-semibold">Payment Method *</Label>
+                  <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                    <SelectTrigger id="inv-pay-method" className="h-9 text-xs">
+                      <SelectValue placeholder="Select method" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Bank Transfer">Bank Transfer / NEFT</SelectItem>
+                      <SelectItem value="UPI">UPI / GPay / PhonePe</SelectItem>
+                      <SelectItem value="Cash">Cash</SelectItem>
+                      <SelectItem value="Cheque">Cheque</SelectItem>
+                      <SelectItem value="Card">Card</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="inv-pay-date" className="text-xs font-semibold">Payment Date *</Label>
+                  <Input
+                    id="inv-pay-date"
+                    type="date"
+                    value={paymentDate}
+                    onChange={(e) => setPaymentDate(e.target.value)}
+                    className="h-9 text-xs"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Notes */}
+              <div className="space-y-1.5">
+                <Label htmlFor="inv-pay-notes" className="text-xs">Notes / Transaction Reference</Label>
+                <Input
+                  id="inv-pay-notes"
+                  value={paymentNotes}
+                  onChange={(e) => setPaymentNotes(e.target.value)}
+                  placeholder="e.g. UTR / Transaction ID / Installment 1"
+                  className="h-9 text-xs"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsPaymentModalOpen(false)}
+                  disabled={recordPaymentMutation.isPending}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  size="sm"
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold gap-1.5"
+                  disabled={recordPaymentMutation.isPending || parsedPaymentAmount <= 0 || parsedPaymentAmount > currentInvoiceMaxDue}
+                >
+                  <CheckCheck className="w-4 h-4" />
+                  <span>
+                    {recordPaymentMutation.isPending
+                      ? "Recording..."
+                      : `Confirm ${willBeFullyPaid ? "Full" : "Partial"} Pay (${formatCurrency(parsedPaymentAmount)})`}
+                  </span>
+                </Button>
+              </div>
+            </form>
           )}
         </DialogContent>
       </Dialog>

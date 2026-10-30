@@ -568,6 +568,11 @@ export const adaptInvoiceData = (invoice: InvoiceBackend): any => {
 
     const customerCode = (client as any)?.clientId || (client as any)?.referenceNo || (invoice as any)?.customerCode || (invoice as any)?.clientIdStr || '';
     const clientAddress = (invoice as any)?.clientAddress || (client as any)?.address || (invoice as any)?.address || '';
+    const paidAmount = Number((invoice as any).paidAmount) || (invoice.status === 'paid' ? grandTotal : 0);
+    const remainingDue = (invoice as any).remainingDue !== undefined 
+        ? Number((invoice as any).remainingDue) 
+        : (invoice.status === 'paid' ? 0 : Math.max(0, grandTotal - paidAmount));
+    const payments = Array.isArray((invoice as any).payments) ? (invoice as any).payments : [];
 
     return {
         id: invoice._id,
@@ -582,6 +587,9 @@ export const adaptInvoiceData = (invoice: InvoiceBackend): any => {
         amount: amount,
         total: amount,
         grandTotal: grandTotal,
+        paidAmount: paidAmount,
+        remainingDue: remainingDue,
+        payments: payments,
         status: invoice.status || 'pending',
         date: invoice.date, // Added for UI compatibility
         issueDate: invoice.date,

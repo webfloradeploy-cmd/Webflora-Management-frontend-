@@ -69,3 +69,22 @@ export const useDeleteInvoice = () => {
         },
     });
 };
+
+export const useRecordPayment = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: ({ id, data }: { id: string; data: { amount: number; method: string; date?: string; notes?: string } }) =>
+            invoiceApi.recordPayment(id, data),
+        onSuccess: (data: any) => {
+            queryClient.invalidateQueries({ queryKey: ['invoices'] });
+            queryClient.invalidateQueries({ queryKey: ['projects'] });
+            queryClient.invalidateQueries({ queryKey: ['clients'] });
+            toast.success(data?.message || 'Payment recorded successfully');
+        },
+        onError: (error: any) => {
+            const message = error.response?.data?.message || 'Failed to record payment';
+            toast.error(message);
+        },
+    });
+};

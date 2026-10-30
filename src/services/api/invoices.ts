@@ -32,6 +32,11 @@ export const invoiceApi = {
         return response.data;
     },
 
+    recordPayment: async (id: string, data: { amount: number; method: string; date?: string; notes?: string }) => {
+        const response = await axiosInstance.post(API_ENDPOINTS.INVOICE_RECORD_PAYMENT(id), data);
+        return response.data;
+    },
+
     delete: async (id: string) => {
         const response = await axiosInstance.delete(API_ENDPOINTS.INVOICE_DELETE(id));
         return response.data;

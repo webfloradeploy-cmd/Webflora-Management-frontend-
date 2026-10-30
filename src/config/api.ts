@@ -43,6 +43,7 @@ export const API_ENDPOINTS = {
     INVOICE_BASE: '/api/invoice',
     INVOICE_BY_ID: (id: string) => `/api/invoice/${id}`,
     INVOICE_UPDATE: (id: string) => `/api/invoice/update/${id}`,
+    INVOICE_RECORD_PAYMENT: (id: string) => `/api/invoice/${id}/pay`,
     INVOICE_DELETE: (id: string) => `/api/invoice/delete/${id}`,
 
     // Communication
